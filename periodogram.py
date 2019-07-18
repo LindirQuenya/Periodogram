@@ -1739,7 +1739,7 @@ class pgramArgs:
                 this.asFreq=1
             elif a[0]=='-h':
                 #set datahome
-                args.datahome=a[1]
+                this.datahome=a[1]
             elif a[0]=='-H':
                 #Unused
                 this.hdu=int(a[1])
