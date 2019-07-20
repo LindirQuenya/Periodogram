@@ -249,9 +249,9 @@ def computeBLS(data,args,fargs,pool):
     results=pool.starmap(doBLS,transpose([[time]*nsamp,[mag]*nsamp,[wt]*nsamp,\
                                       makeArrOfCopies(binWt,nsamp),\
                                       makeArrOfCopies(binMag,nsamp),\
-                                      period,[nbins]*nsamp,[binExt]*nsamp,\
-                                      [minBins]*nsamp,[minWt]*nsamp,\
-                                      [totalWt]*nsamp]))
+                                      period,[nbins]*nsamp,[nsamp]*nsamp,\
+                                          [binExt]*nsamp,[minBins]*nsamp,\
+                                          [minWt]*nsamp,[totalWt]*nsamp]))
     results=transpose(results)
     fargs.power=results[0]
     fargs.blsR=results[1]
