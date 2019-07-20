@@ -176,7 +176,7 @@ def computeBLS(data,args,fargs,pool):
         raise TypeError('Inappropriate argument type:\nfargs must be of type funcArgs!')
     if not isinstance(args,pgramArgs):
         raise TypeError('Inappropriate argument type:\nargs must be of type pgramArgs!')
-    if not isinstance(pool,mp.Pool):
+    if not isinstance(pool,mp.pool.Pool):
         raise TypeError('Inappropriate argument type:\npool must be of type Pool!')
     [ndata,time]=funcArgsGetTime(fargs)
     [ndata,mag]=funcArgsGetMag(fargs)
@@ -300,7 +300,7 @@ def doBLS(time,mag,wt,binWt,binMag,period,nbins,nsamp,binExt,minBins,minWt,\
         return (maxPwr,lowWt/totalWt,lowMag,lowStart,lowEnd)
     return (0,0,0,0,0)
 def computeLombScargle(data,args,fargs,pool):
-    if not isinstance(pool,mp.Pool):
+    if not isinstance(pool,mp.pool.Pool):
         raise TypeError('Inappropriate argument type:\npool must be of type Pool!')
     if not isinstance(data,dataTbl):
         raise TypeError('Inappropriate argument type:\ndata must be of type dataTbl!')
@@ -1330,6 +1330,8 @@ def computePeriodogram(args,data,fargs,pool):
     if not isinstance(data,dataTbl):
         raise TypeError("Error: data must be of type dataTbl!")
     if not isinstance(fargs,funcArgs):
+        raise TypeError("Error: fargs must be of type funcArgs!")
+    if not isinstance(pool,mp.pool.Pool):
         raise TypeError("Error: fargs must be of type funcArgs!")
 
     #print out a time estimate, calculated earlier
