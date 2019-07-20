@@ -1135,141 +1135,141 @@ def phaseLightCurve(fargs):
         if j>0 and myPhase[j]<myPhase[j-1]:
             print("Sort error?")
 
-            
-        if mySmooth!=None:
-            #Now smooth the phases:
-            #
-            #To reduce computation time, remember values from the
-            #last round. Specifically:
-            
-            #Given that phase[j]>=phase[j-1] (data is sorted)
+        
+    if mySmooth!=None:
+        #Now smooth the phases:
+        #
+        #To reduce computation time, remember values from the
+        #last round. Specifically:
+        
+        #Given that phase[j]>=phase[j-1] (data is sorted)
 
-            #If
-            #(phase[j-1] - phase[prevLo-1]) > smooth/2 then
-            #(phase[j] - phase[prevLo-1]) > smooth/2 and, generally,
-            #(phase[j] - phase[k]) > smooth/2 for any k<prevLo
+        #If
+        #(phase[j-1] - phase[prevLo-1]) > smooth/2 then
+        #(phase[j] - phase[prevLo-1]) > smooth/2 and, generally,
+        #(phase[j] - phase[k]) > smooth/2 for any k<prevLo
 
-            #-> there's no need to consider any k<prevLo as the lower
-            #edge of the box.
+        #-> there's no need to consider any k<prevLo as the lower
+        #edge of the box.
 
-            #If
-            #(phase[prevHi] - phase[j-1]) <= smooth/2 then
-            #(phase[prevHi] - phase[j]) <= smooth/2 and, generally,
-            #(phase[k] - phase[j]) <= smooth/2 for any k <= prevHi
+        #If
+        #(phase[prevHi] - phase[j-1]) <= smooth/2 then
+        #(phase[prevHi] - phase[j]) <= smooth/2 and, generally,
+        #(phase[k] - phase[j]) <= smooth/2 for any k <= prevHi
 
-            #-> there's no need to consider any k<prevHi as the upper
-            #edge of the box
+        #-> there's no need to consider any k<prevHi as the upper
+        #edge of the box
 
-            ###
+        ###
 
-            #"Wrapping":
-            #Phase-smoothing can still take place for values at the beginning
-            #or end of a period by "wrapping" around to the other end of the
-            #array. For example, we could smmoth values for phase 0 with
-            #those at phase 1-s, or values at phase 1 with those at
-            #phase 0+s. Since the assumption in phase-folding is that the
-            #signal is periodic, looking at the other end of the array is like
-            #wrapping around to the "next" or "previous" period
-            bLo=0;bHi=0;prevLo=0;prevHi=0;count=0
-            boxSum=0.0;halfbox=fargs.boxSize/2.0
+        #"Wrapping":
+        #Phase-smoothing can still take place for values at the beginning
+        #or end of a period by "wrapping" around to the other end of the
+        #array. For example, we could smmoth values for phase 0 with
+        #those at phase 1-s, or values at phase 1 with those at
+        #phase 0+s. Since the assumption in phase-folding is that the
+        #signal is periodic, looking at the other end of the array is like
+        #wrapping around to the "next" or "previous" period
+        bLo=0;bHi=0;prevLo=0;prevHi=0;count=0
+        boxSum=0.0;halfbox=fargs.boxSize/2.0
 
-            for j in range(ndata):
-                if PHASE_WRAPPING:
-                    #Determine value for bHi. If j=0, prevHi=0,
-                    #thereafter updated to the largest index such
-                    #that phase[bHi] - phase[j-1]<halfBox
-                    for bHi in range(prevHi,2*ndata-1):
-                        if bHi<(ndata-1):
-                            if (myPhase[bHi+1]-myPhase[j])>halfbox:
-                                break
-                        else:
-                            #adjust index and phase range if we're off the
-                            #end of the array
-                            if (myPhase[bHi-ndata+1]-myPhase[j]+1)>halfbox:
-                                break
-                    if (j==0):
-                        #Get initial value for bLo for j=0: step back until
-                        #ndata + (bLo -1) is out of the range
-                        for bLo in range(0,-ndata,-1): #+1 removed because of >=
-                            if (myPhase[j]-myPhase[ndata+bLo-1]+1)>halfbox:
-                                break
-                    else:
-                        #once prevLo hase ben properly initialized (i.e. j>0),
-                        #start from prevLo and shift box as needed
-                        for bLo in range(prevLo,j):
-                            if bLo<0:
-                                if (myPhase[j]-myPhase[ndata+bLo]+1)<halfbox:
-                                    break
-                            else:
-                                if (myPhase[j]-myPhase[bLo])<halfbox:
-                                    break
-                else:
-                    #Find edges of box (no phase-wrapping)
-                    for bLo in range(prevLo,j):
-                        if (myPhase[j]-myPhase[bLo])<halfbox:
-                            break
-                    for bHi in range(prevHi,ndata-1):
+        for j in range(ndata):
+            if PHASE_WRAPPING:
+                #Determine value for bHi. If j=0, prevHi=0,
+                #thereafter updated to the largest index such
+                #that phase[bHi] - phase[j-1]<halfBox
+                for bHi in range(prevHi,2*ndata-1):
+                    if bHi<(ndata-1):
                         if (myPhase[bHi+1]-myPhase[j])>halfbox:
                             break
-                    if DEBUG:
-                        #check that the values for bLo and bHi satisfy
-                        #the conditions we were trying to meet
-                        if ((myPhase[bHi]-myPhase[j])>halfbox) or\
-                           (((bHi+1)<ndata) and ((myPhase[bHi+1]-myPhase[j])<=halfbox))\
-                           or ((myPhase[j]-myPhase[bLo])>halfbox) or\
-                           ((bLo>0)and((myPhase[j]-myPhase[bLo-1])<=halfbox)):
-                            print("BOX ERROR!")
-
-                #Initialize the sum of magnitudes in our box. We will
-                #start fro scratch if j = 0 or if our new low edge is
-                #above our previous high edge
-                if (j==0) or (bLo>=prevHi):
-                    boxSum=0
-                    count=0
-                    for k in range(bLo,bHi+1):#shifted +1 due to <=
-                        if k<0:
-                            myIdx=ndata+k
-                        elif k>=ndata:
-                            myIdx=k-ndata
-                        else:
-                            myIdx=k
-                        boxSum+=myMag[myIdx]
-                        count+=1
+                    else:
+                        #adjust index and phase range if we're off the
+                        #end of the array
+                        if (myPhase[bHi-ndata+1]-myPhase[j]+1)>halfbox:
+                            break
+                if (j==0):
+                    #Get initial value for bLo for j=0: step back until
+                    #ndata + (bLo -1) is out of the range
+                    for bLo in range(0,-ndata,-1): #+1 removed because of >=
+                        if (myPhase[j]-myPhase[ndata+bLo-1]+1)>halfbox:
+                            break
                 else:
-                    #if there is overlap between this box and the
-                    #previous one, subtract off the left edge and
-                    #add the right
-                    for k in range(prevLo,bLo):
-                        if k<0:
-                            myIdx=ndata+k
+                    #once prevLo hase ben properly initialized (i.e. j>0),
+                    #start from prevLo and shift box as needed
+                    for bLo in range(prevLo,j):
+                        if bLo<0:
+                            if (myPhase[j]-myPhase[ndata+bLo]+1)<halfbox:
+                                break
                         else:
-                            myIdx=k
-                        boxSum-=myMag[myIdx]
-                        count-=1
-                    for k in range(prevHi+1,bHi+1):#shifted+= due to <=
-                        if k>=ndata:
-                            myIdx=k-ndata
-                        else:
-                            myIdx=k
-                        boxSum+=myMag[myIdx]
-                        count+=1
+                            if (myPhase[j]-myPhase[bLo])<halfbox:
+                                break
+            else:
+                #Find edges of box (no phase-wrapping)
+                for bLo in range(prevLo,j):
+                    if (myPhase[j]-myPhase[bLo])<halfbox:
+                        break
+                for bHi in range(prevHi,ndata-1):
+                    if (myPhase[bHi+1]-myPhase[j])>halfbox:
+                        break
+                if DEBUG:
+                    #check that the values for bLo and bHi satisfy
+                    #the conditions we were trying to meet
+                    if ((myPhase[bHi]-myPhase[j])>halfbox) or\
+                       (((bHi+1)<ndata) and ((myPhase[bHi+1]-myPhase[j])<=halfbox))\
+                       or ((myPhase[j]-myPhase[bLo])>halfbox) or\
+                       ((bLo>0)and((myPhase[j]-myPhase[bLo-1])<=halfbox)):
+                        print("BOX ERROR!")
 
-                #save the values of bLo and bHi for the next value of j
-                prevLo=bLo
-                prevHi=bHi
-                if count>0:
-                    mySmooth[j]=boxSum/count
-                    if myChi!=None:
-                        myChi[j]=(myMag[j]-mySmooth[j])*(myMag[j]-mySmooth[j])
+            #Initialize the sum of magnitudes in our box. We will
+            #start fro scratch if j = 0 or if our new low edge is
+            #above our previous high edge
+            if (j==0) or (bLo>=prevHi):
+                boxSum=0
+                count=0
+                for k in range(bLo,bHi+1):#shifted +1 due to <=
+                    if k<0:
+                        myIdx=ndata+k
+                    elif k>=ndata:
+                        myIdx=k-ndata
+                    else:
+                        myIdx=k
+                    boxSum+=myMag[myIdx]
+                    count+=1
+            else:
+                #if there is overlap between this box and the
+                #previous one, subtract off the left edge and
+                #add the right
+                for k in range(prevLo,bLo):
+                    if k<0:
+                        myIdx=ndata+k
+                    else:
+                        myIdx=k
+                    boxSum-=myMag[myIdx]
+                    count-=1
+                for k in range(prevHi+1,bHi+1):#shifted+= due to <=
+                    if k>=ndata:
+                        myIdx=k-ndata
+                    else:
+                        myIdx=k
+                    boxSum+=myMag[myIdx]
+                    count+=1
 
-                #fargs.smoothedMag now contains the smoothed magnitudes based
-                #        on fargs.p
-                #fargs.chi contains the squared distance from the smoothed
-                        #curve for each data point
-                #fargs.phase contains the phase for each point
+            #save the values of bLo and bHi for the next value of j
+            prevLo=bLo
+            prevHi=bHi
+            if count>0:
+                mySmooth[j]=boxSum/count
+                if myChi!=None:
+                    myChi[j]=(myMag[j]-mySmooth[j])*(myMag[j]-mySmooth[j])
 
-                #rows are sorted by fargs.phase, but fargs.sortable[n][1]
-                        #contains the original index of each data point
+            #fargs.smoothedMag now contains the smoothed magnitudes based
+            #        on fargs.p
+            #fargs.chi contains the squared distance from the smoothed
+                    #curve for each data point
+            #fargs.phase contains the phase for each point
+
+            #rows are sorted by fargs.phase, but fargs.sortable[n][1]
+                    #contains the original index of each data point
 def findPeaks(args,fargs):
     if not isinstance(fargs,funcArgs):
         raise TypeError("Error: fargs must be of type funcArgs!")
