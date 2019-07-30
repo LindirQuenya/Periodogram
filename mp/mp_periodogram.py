@@ -1,8 +1,14 @@
 #UNFINISHED!!! DO NOT RUN
+#Python multiprocessing periodogram code
+#Converted from C++ to Python by John Berberian, Jr.
+#Original C++ code by Peter Plavchan
+#This version uses multiprocessing
+
 import sys, os, math
 from getopt import getopt
 from enum import IntEnum
 from pathlib import Path
+import multiprocessing as mp
 import time
 
 #"start" the timer
@@ -71,7 +77,7 @@ TRIM_OUTLIERS=False
 #cycle is currently being completed. Warning:
 #generates a lot of output.
 #Default:False
-TRACK_CYCLES=True
+TRACK_CYCLES=False
 
 #Flag to print a time estimate before running,
 #and the actual elapsed time afterwards. Disable
@@ -166,8 +172,6 @@ def makeArrOfCopies(inList,num):
             bigArr[i].append(k)
     return bigArr
 
-import multiprocessing as mp
-import time
 def computeBLS(data,args,fargs,pool):
     #Check for type errors
     if not isinstance(data,dataTbl):
@@ -317,10 +321,10 @@ def computeLombScargle(data,args,fargs,pool):
     sdMag=dtGetDev(data,DATA_FIELD_TYPE.DATA_Y)
     if sdMag==0:
         raise ValueError("Error in InputFile: Zero deviation in data values!")
-    results=pool.starmap(doLS,transpose([[time]*nsamp,[mag]*nsamp,period]))
+    results=pool.starmap(doLS,transpose([[time]*nsamp,[mag]*nsamp,[sdMag]*nsamp,period]))
     fargs.power=results
 
-def doLS(time,mag,p):
+def doLS(time,mag,sdMag,p):
     ndata=len(time)
     w=2*math.pi/p
     tnum=0
@@ -497,7 +501,7 @@ def computePlavchan(data,args,fargs,pool):
 
     [ndata,time]=funcArgsGetTime(fargs)
     [ndata,mag]=funcArgsGetMag(fargs)
-    [data,smooth]=funcArgsGetSmoothedMag(fargs)
+    [ndata,smooth]=funcArgsGetSmoothedMag(fargs)
     [nsamp,period]=funcArgsGetPeriods(fargs)
     [nsamp,power]=funcArgsGetPower(fargs)
     noutliers=args.nout
@@ -526,12 +530,14 @@ def computePlavchan(data,args,fargs,pool):
     
     #Compute periodogram
     fargs.power=pool.starmap(doPlav,transpose([[time]*nsamp,[mag]*nsamp,\
-                                           makeArrOfCopies(smooth,nsamp)\
-                                           [boxSize]*nsamp,period]))
+                                           makeArrOfCopies(smooth,nsamp),\
+                                           [boxSize]*nsamp,[maxStd]*nsamp,\
+                                            [noutliers]*nsamp,period]))
 
-def doPlav(time,mag,mySmooth,boxSize,p):
+def doPlav(time,mag,mySmooth,boxSize,maxStd,noutliers,p):
+    ndata=len(time)
     errval=0
-    tmpChi=phaseLightCurve(time,mag,mySmooth,boxSize,maxStd,p)
+    tmpChi=phaseLightCurve(time,mag,mySmooth,boxSize,p)
     tmpChi.sort()
     count=0
     maxChi=0
@@ -543,7 +549,7 @@ def doPlav(time,mag,mySmooth,boxSize,p):
                 break
     maxChi/=count
     if maxChi>0:
-        return maxStd/maxStd
+        return maxStd/maxChi
     return errval
 
 #######################

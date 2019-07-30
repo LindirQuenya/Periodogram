@@ -1,3 +1,8 @@
+#Python periodogram code
+#Converted from C++ to Python by John Berberian, Jr.
+#Original C++ code by Peter Plavchan
+#This version does not implement multiprocessing
+
 import sys, os, math
 from getopt import getopt
 from enum import IntEnum
@@ -70,7 +75,7 @@ TRIM_OUTLIERS=False
 #cycle is currently being completed. Warning:
 #generates a lot of output.
 #Default:False
-TRACK_CYCLES=True
+TRACK_CYCLES=False
 
 #Flag to print a time estimate before running,
 #and the actual elapsed time afterwards. Disable
