@@ -1,8 +1,8 @@
-#UNFINISHED!!! DO NOT RUN
 #Python multiprocessing periodogram code
 #Converted from C++ to Python by John Berberian, Jr.
 #Original C++ code by Peter Plavchan
-#This version uses multiprocessing
+#This version uses multiprocessing, and is the recommended
+#multiprocessing version.
 
 import sys, os, math
 from getopt import getopt
@@ -1925,7 +1925,7 @@ class pgramArgs:
             print("outdir:"+this.outDir)
         return this.outtbl
     def argsPrint(this):
-        arr=['python3','periodogram.py']
+        arr=['python3','mp_periodogram.py']
         if this.algo:
             arr.append('-a')
             arr.append(str(this.algo))
