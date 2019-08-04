@@ -114,9 +114,12 @@ UNSET_VALUE=-32768
 MAXSTR=32768
 TINY_NUM=0.0000001
 UNSET_MEAN=-1e7
-BLS_T0=4.5e-8
-LS_T0=2.6e-7
-PLAV_T0=4.6e-8
+
+#Derived from running on Peter's cluster @ 2.8 GHz.
+#Adjust as needed.
+BLS_T0=1.39e-6
+LS_T0=1.964e-6
+PLAV_T0=7.878398e-7
 
 #######################
 ##
@@ -291,7 +294,7 @@ def computeBLS(data,args,fargs):
                 blsL2(j,time,p,wt,mag,nbins,binWt,binMag)
             else:
                 #fraction of the period elapsed at time time[j]
-                phase=(time[j]/p)%1
+                phase=math.fmod((time[j]/p),1)
 
                 #bin corresponding to that phase
                 b=int(math.floor(nbins*phase))
@@ -560,7 +563,7 @@ if DO_PROFILE:
         bw[b]=0
 
     def blsL2(j,time,p,wt,mag,nb,bm,bw):
-        phase=(time[j]/p)%1
+        phase=math.fmod((time[j]/p),1)
         b=math.floor(nb*phase)
         bw[b]+=wt[j]
         bm[b]+=wt[j]*mag[j]
@@ -1102,7 +1105,7 @@ def estimateProcessingTime(nsamp,ndata,args,qmax,algo):
     else:
         raise ValueError("PeriodogramType: invalid value "+algo)
     if timeEst==0:
-        #this must have been a non-fata error: note it
+        #this must have been a non-fatal error: note it
         timeEst=-1
     return timeEst
 
@@ -1549,9 +1552,9 @@ def computePeriodogram(args,data,fargs):
     findPeaks(args,fargs)
 
 #New version of mod function, once I remembered
-#that python has a builtin
+#that python has a builtin from math
 def mod(n,m):
-    return n%m
+    return math.fmod(n,m)
 
 #Finds the smallest nonnegative
 #number that is a multiple of m away from n.
