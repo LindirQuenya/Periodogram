@@ -145,7 +145,6 @@ DEFAULT_NBINS=-32768
 DEFAULT_QMIN=0.05
 DEFAULT_QMAX=0.10
 DEFAULT_DELIMITER=','
-DEFAULT_NPROC=mp.cpu_count()
 
 MIN_NDATA=2
 
@@ -172,29 +171,6 @@ def makeArrOfCopies(inList,num):
         for i in range(len(bigArr)):
             bigArr[i].append(k)
     return bigArr
-
-def makeCopy(arr):
-    newArr=[]
-    for k in arr:
-        newArr.append(k)
-    return newArr
-
-def getSplitNums(nsamp,nproc):
-    n=nsamp/nproc
-    k=math.floor(n)
-    startArr,endArr,myNsamp=[],[],nsamp
-    while myNsamp>=k:
-        startArr.append(math.floor(nsamp-myNsamp))
-        myNsamp-=n
-        endArr.append(math.floor(nsamp-myNsamp))
-    return startArr,endArr
-
-def merge_arrs(firstArr):
-    newArr=[]
-    for l in firstArr:
-        for e in l:
-            newArr.append(e)
-    return newArr
 
 def computeBLS(data,args,fargs,pool):
     #Check for type errors
@@ -270,40 +246,22 @@ def computeBLS(data,args,fargs,pool):
     #Initialize arrays with null values, because we refer to
     #specific elements of these arrays by index later on:
     #just appending as needed won't work here.
-    myArgList=[]
-    startArr,endArr=getSplitNums(nsamp,pool._processes)
-    for i in range(len(startArr)):
-        myArgList.append([time,mag,wt,period,nbins,binExt,minBins,minWt,\
-                          totalWt,binMax,startArr[i],endArr[i]])
+    binMag=[0.0]*binMax
+    binWt=[0.0]*binMax
 
     #Compute periodogram
-    results=pool.starmap(splitBLS,myArgList)
-##    results=pool.starmap(doBLS,transpose([[time]*nsamp,[mag]*nsamp,[wt]*nsamp,\
-##                                      makeArrOfCopies(binWt,nsamp),\
-##                                      makeArrOfCopies(binMag,nsamp),\
-##                                      period,[nbins]*nsamp,[nsamp]*nsamp,\
-##                                          [binExt]*nsamp,[minBins]*nsamp,\
-##                                          [minWt]*nsamp,[totalWt]*nsamp]))
-    results=transpose(merge_arrs(results))
+    results=pool.starmap(doBLS,transpose([[time]*nsamp,[mag]*nsamp,[wt]*nsamp,\
+                                      makeArrOfCopies(binWt,nsamp),\
+                                      makeArrOfCopies(binMag,nsamp),\
+                                      period,[nbins]*nsamp,[nsamp]*nsamp,\
+                                          [binExt]*nsamp,[minBins]*nsamp,\
+                                          [minWt]*nsamp,[totalWt]*nsamp]))
+    results=transpose(results)
     fargs.power=results[0]
     fargs.blsR=results[1]
     fargs.blsS=results[2]
-
-    #Commented out because they are unused
-    #fargs.lowBin0=results[3]
-    #fargs.lowBin1=results[4]
-
-#stopNum is exclusive
-def splitBLS(time,mag,wt,period,nbins,binExt,minBins,minWt,totalWt,binMax,\
-             startNum,stopNum):
-    nsamp=len(period)
-    res=[]
-    for i in range(startNum,stopNum):
-        binWt=[0.0]*binMax
-        binMag=[0.0]*binMax
-        res.append(doBLS(time,mag,wt,binWt,binMag,period[i],nbins,nsamp,binExt,\
-                         minBins,minWt,totalWt))
-    return res
+    fargs.lowBin0=results[3]
+    fargs.lowBin1=results[4]
 #time and mag are arrs. binWt and binMag are working vars,
 #so they can't be shared. copies will have to be made for
 #each run of the function.
@@ -343,8 +301,8 @@ def doBLS(time,mag,wt,binWt,binMag,period,nbins,nsamp,binExt,minBins,minWt,\
                     lowMag=sumMag
     maxPwr=math.sqrt(maxPwr)
     if maxPwr>0:
-        return (maxPwr,lowWt/totalWt,lowMag)#,lowStart,lowEnd)
-    return (0,0,0)#,0,0)
+        return (maxPwr,lowWt/totalWt,lowMag,lowStart,lowEnd)
+    return (0,0,0,0,0)
 def computeLombScargle(data,args,fargs,pool):
     if not isinstance(pool,mp.pool.Pool):
         raise TypeError('Inappropriate argument type:\npool must be of type Pool!')
@@ -363,18 +321,9 @@ def computeLombScargle(data,args,fargs,pool):
     sdMag=dtGetDev(data,DATA_FIELD_TYPE.DATA_Y)
     if sdMag==0:
         raise ValueError("Error in InputFile: Zero deviation in data values!")
-    myArgList=[]
-    startArr,endArr=getSplitNums(nsamp,pool._processes)
-    for i in range(len(startArr)):
-        myArgList.append([time,mag,sdMag,period,startArr[i],endArr[i]])
-    results=pool.starmap(splitLS,myArgList)
-##    results=pool.starmap(doLS,transpose([[time]*nsamp,[mag]*nsamp,[sdMag]*nsamp,period]))
-    fargs.power=merge_arrs(results)
-def splitLS(time,mag,sdMag,period,startNum,stopNum):
-    ret=[]
-    for i in range(startNum,stopNum):
-        ret.append(doLS(time,mag,sdMag,period[i]))
-    return ret
+    results=pool.starmap(doLS,transpose([[time]*nsamp,[mag]*nsamp,[sdMag]*nsamp,period]))
+    fargs.power=results
+
 def doLS(time,mag,sdMag,p):
     ndata=len(time)
     w=2*math.pi/p
@@ -578,24 +527,13 @@ def computePlavchan(data,args,fargs,pool):
     maxStd/=noutliers
 
     boxSize=fargs.boxSize
-    myArgList=[]
-    startArr,endArr=getSplitNums(nsamp,pool._processes)
-    for i in range(len(startArr)):
-        myArgList.append([time,mag,makeCopy(smooth),boxSize,maxStd,\
-                          noutliers,period,startArr[i],endArr[i]])
+    
     #Compute periodogram
-    fargs.power=merge_arrs(pool.starmap(splitPlav,myArgList))
-##    fargs.power=pool.starmap(doPlav,transpose([[time]*nsamp,[mag]*nsamp,\
-##                                           makeArrOfCopies(smooth,nsamp),\
-##                                           [boxSize]*nsamp,[maxStd]*nsamp,\
-##                                            [noutliers]*nsamp,period]))
-def splitPlav(time,mag,mySmooth,boxSize,maxStd,noutliers,period,\
-              startNum,endNum):
-    ret=[]
-    for i in range(startNum,endNum):
-        ret.append(doPlav(time,mag,mySmooth,boxSize,maxStd,\
-                          noutliers,period[i]))
-    return ret
+    fargs.power=pool.starmap(doPlav,transpose([[time]*nsamp,[mag]*nsamp,\
+                                           makeArrOfCopies(smooth,nsamp),\
+                                           [boxSize]*nsamp,[maxStd]*nsamp,\
+                                            [noutliers]*nsamp,period]))
+
 def doPlav(time,mag,mySmooth,boxSize,maxStd,noutliers,p):
     ndata=len(time)
     errval=0
@@ -1538,9 +1476,6 @@ class pgramArgs:
         #Flag to label output files
         this.outLabeled=False
 
-        #Number of workers in pool
-        this.nproc=DEFAULT_NPROC
-
     #Function to parse arguments passed to the "periodogram"
     #command at the command line
     def populate(this):
@@ -1571,11 +1506,8 @@ class pgramArgs:
                 this.nbins=int(a[1])
                 nbSet=1
             elif a[0]=='-c':
-                if int(a[1])<=0:
-                    raise ValueError("Inappropriate value for option -c:"+a[1]+"\nargument must be greater than 0!")
-                if float(a[1])!=int(a[1]):
-                    raise ValueError("Inappropriate value for option -c:"+a[1]+"\ncannot have fractional workers!")
-                this.nproc=int(a[1])
+                #not doing paralell processing right now.
+                pass
             elif a[0]=='-d':
                 if float(a[1])<=0:
                     raise ValueError("Inappropriate value for option -d:"+a[1]+"\nargument must be greater than 0!")
@@ -1926,9 +1858,6 @@ class pgramArgs:
         if this.nbins!=DEFAULT_NBINS:
             arr.append('-b')
             arr.append(str(this.nbins))
-        if this.nproc:
-            arr.append("-c")
-            arr.append(str(this.nproc))
         if this.dfreq!=DEFAULT_DFREQ and this.pstepType in ["fixedf","fixedp"]:
             arr.append('-d')
             arr.append(str(this.dfreq))
@@ -2495,7 +2424,6 @@ class DATA_FIELD_TYPE(IntEnum):
 
 PGRAM_USAGE_TEXT=" Usage: periodogram \n\t[-a <PeriodogramType (algorithm): one of ls, bls, plav>]"\
                   "\n\t[-b <NumberOfBins (-a bls only)>]"\
-                  "\n\t[-c <NumWorkers>]"\
                   "\n\t[-d <FixedStepSize (-i fixedf or -i fixedp only)>]"\
                   "\n\t[-D <output file name for debugging (may say 'stdout' or 'stderr')>]"\
                   "\n\t[-e <DataDelimiter>]"\
@@ -2545,13 +2473,9 @@ PGRAM_HELP_TEXT="\n\n Description:  "                                           
     "\n --help"                                                         \
     "\n    Returns this message.\n"                                     \
     "\n -a <PeriodogramType (algorithm)> "                              \
-    "\n    Specifies which algorithm to run (one of ls, bls, plav). Defaults"   \
-    "\n    to bls."\
+    "\n    Specifies which algorithm to run (one of ls, bls, plav). "   \
     "\n -b <NumberOfBins>"                                              \
     "\n    Specifies the number of bins to use in the bls algorithm"    \
-    "\n -c <NumWorkers>"\
-    "\n    Specifies how many workers to use in the multiprocessing Pool."\
-    "\n    Defaults to the number of processers on the computer."\
     "\n -d <FixedStepSize (-i fixedf or -i fixedp only)>"                        \
     "\n    Specifies the size of the fixed frequency step or period step,"              \
     "\n    depending on which of fixedf or fixedp was chosen for -i."\
@@ -2661,50 +2585,51 @@ PGRAM_HELP_TEXT="\n\n Description:  "                                           
 #######################
 
 if __name__=='__main__':
-    #Construct and populate the pgramArgs object
-    args=pgramArgs()
-    args.populate()
+    with mp.Pool(processes=mp.cpu_count()) as pool:
+        #Construct and populate the pgramArgs object
+        args=pgramArgs()
+        args.populate()
 
-    #Get the output file stream
-    if args.outToStdOut:
-        out=sys.stdout
-    else:
-        fname=args.getOutputFile()
-        if fname==None:
-            print(args.getInBase())
-            print(args.getOutBase())
-            print(args.getOutputFile())
-        out=open(fname,'w+')
+        #Get the output file stream
+        if args.outToStdOut:
+            out=sys.stdout
+        else:
+            fname=args.getOutputFile()
+            if fname==None:
+                print(args.getInBase())
+                print(args.getOutBase())
+                print(args.getOutputFile())
+            out=open(fname,'w+')
 
-    #Construct and populate the dataTbl object
-    data=dataTbl()
-    data.populate(args.intbl,args.xcol,args.ycol,args.yerrCol,\
-                  args.constraintCol,args.constraintMin,args.constraintMax,args.inputDelimiter)
+        #Construct and populate the dataTbl object
+        data=dataTbl()
+        data.populate(args.intbl,args.xcol,args.ycol,args.yerrCol,\
+                      args.constraintCol,args.constraintMin,args.constraintMax,args.inputDelimiter)
 
-    #Construct and populate the funcArgs object
-    fargs=funcArgs()
-    fargs.populate(args,data)
-    with mp.Pool(processes=args.nproc) as pool:
+        #Construct and populate the funcArgs object
+        fargs=funcArgs()
+        fargs.populate(args,data)
+
         #Compute the periodogram
         computePeriodogram(args,data,fargs,pool)
 
-    #Save the output
-    if args.outLabeled==1:
-        saveLabeledOutput(out,fargs.period,fargs.power,"PERIOD",'POWER',args.inputDelimiter)
-    else:
-        saveOutput(out,fargs.period,fargs.power,args.inputDelimiter)
-    if not args.outToStdOut:
-        out.close()
-    print("All done!")
-    print("Here is the command to reconstruct this:")
-    print(args.argsPrint())
+        #Save the output
+        if args.outLabeled==1:
+            saveLabeledOutput(out,fargs.period,fargs.power,"PERIOD",'POWER',args.inputDelimiter)
+        else:
+            saveOutput(out,fargs.period,fargs.power,args.inputDelimiter)
+        if not args.outToStdOut:
+            out.close()
+        print("All done!")
+        print("Here is the command to reconstruct this:")
+        print(args.argsPrint())
 
-    #"stop" the timer
-    t_f=time.time()
-    t_d=t_f-t_i
-    if PRINT_TIMES:
-        #Print the result from our timer
-        print("Time elapsed: "+format(t_d,'.4f')+" seconds ("+format(t_d/60,'.4f')+" minutes)")
+        #"stop" the timer
+        t_f=time.time()
+        t_d=t_f-t_i
+        if PRINT_TIMES:
+            #Print the result from our timer
+            print("Time elapsed: "+format(t_d,'.4f')+" seconds ("+format(t_d/60,'.4f')+" minutes)")
 
 
 ##def multiFunc(a,b,c):
