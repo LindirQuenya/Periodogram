@@ -116,9 +116,12 @@ UNSET_VALUE=-32768
 MAXSTR=32768
 TINY_NUM=0.0000001
 UNSET_MEAN=-1e7
-BLS_T0=4.5e-8
-LS_T0=2.6e-7
-PLAV_T0=4.6e-8
+
+#Derived from running on Peter's cluster @ 2.8 GHz.
+#Adjust as needed.
+BLS_T0=1.39e-6
+LS_T0=1.964e-6
+PLAV_T0=7.878398e-7
 
 #######################
 ##
@@ -1142,8 +1145,11 @@ def estimateProcessingTime(nsamp,ndata,args,qmax,algo):
     else:
         raise ValueError("PeriodogramType: invalid value "+algo)
     if timeEst==0:
-        #this must have been a non-fata error: note it
+        #this must have been a non-fatal error: note it
         timeEst=-1
+    else:
+        #Approximate speedup as a factor of 1/sqrt(nproc)
+        timeEst/=math.sqrt(args.nproc)
     return timeEst
 
 def findPeaks(args,fargs):
