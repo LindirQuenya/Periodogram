@@ -107,6 +107,10 @@ MAX_TRIM_FRACTION=0.1
 #Maximum number of iterations for statTrimOutliers()
 #Default:10
 MAX_ITERATIONS=10
+
+#Function to scale the time estimate by, as nproc increases
+SCALE_TIME=lambda nproc: 1/math.sqrt(nproc)
+
 #######################
 ##
 ##  Constants
@@ -1148,8 +1152,8 @@ def estimateProcessingTime(nsamp,ndata,args,qmax,algo):
         #this must have been a non-fatal error: note it
         timeEst=-1
     else:
-        #Approximate speedup as a factor of 1/sqrt(nproc)
-        timeEst/=math.sqrt(args.nproc)
+        #Scale the timeEst based on SCALE_TIME()
+        timeEst*=SCALE_TIME(args.nproc)
     return timeEst
 
 def findPeaks(args,fargs):
