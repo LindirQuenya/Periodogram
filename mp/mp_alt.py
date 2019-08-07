@@ -116,9 +116,13 @@ UNSET_VALUE=-32768
 MAXSTR=32768
 TINY_NUM=0.0000001
 UNSET_MEAN=-1e7
-BLS_T0=4.5e-8
-LS_T0=2.6e-7
-PLAV_T0=4.6e-8
+
+#Numbers copied over from periodogram and
+#mp_periodogram. TimeEst is close to
+#useless on this one.
+BLS_T0=1.39e-6
+LS_T0=1.964e-6
+PLAV_T0=7.878398e-7
 
 #######################
 ##
