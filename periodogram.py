@@ -56,10 +56,6 @@ SMALLEST_TIME_STEP=False
 #Default:False
 ADJUST_PERIOD_TO_RANGE=False
 
-#TODO:ask Dr. Plavchan about this one
-#Default:False
-DO_PROFILE=False
-
 #Flag to fit a lognormal distribution to the powers
 #returned by BLS
 #Default:False
@@ -123,6 +119,7 @@ UNSET_MEAN=-1e7
 BLS_T0=1.39e-6
 LS_T0=1.964e-6
 PLAV_T0=7.878398e-7
+DO_PROFILE=False
 
 #######################
 ##
