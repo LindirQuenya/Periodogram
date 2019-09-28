@@ -2,6 +2,9 @@
 #Converted from C++ to Python by John Berberian, Jr.
 #Original C++ code by Peter Plavchan
 #This version does not implement multiprocessing
+#Meant to be run from the terminal with the command:
+#user@computer:~$ python3 periodogram.py [options] <InputFile>
+#For more information, run this with the option --help.
 
 import sys, os, math
 from getopt import getopt
@@ -1698,7 +1701,7 @@ class pgramArgs:
                 this.nbins=int(a[1])
                 nbSet=1
             elif a[0]=='-c':
-                #not doing paralell processing right now.
+                #not doing parallel processing right now.
                 pass
             elif a[0]=='-d':
                 if float(a[1])<=0:

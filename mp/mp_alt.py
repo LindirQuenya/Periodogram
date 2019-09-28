@@ -3,6 +3,9 @@
 #Original C++ code by Peter Plavchan
 #This version uses multiprocessing, but is very inefficient.
 #mp_periodogram.py is recommended over this program.
+#Meant to be run from the terminal with the command:
+#user@computer:~$ python3 mp_alt.py [options] <InputFile>
+#For more information, run this with the option --help.
 
 import sys, os, math
 from getopt import getopt
