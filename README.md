@@ -1,3 +1,5 @@
+For all code that is run in this project, it is meant to be run from the command line with the command `python3 file.py`, depending on which file is being run. 
+
 # Periodogram
 This is the python code for a periodogram (converted from C++).
 There are three periodogram algorithms availiable: Box Least Squares, Lomb-Scargle, and Plavchan.
