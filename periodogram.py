@@ -2757,17 +2757,16 @@ PGRAM_HELP_TEXT="\n\n Description:  "                                           
     "\n "                                                               \
     "\n Results: "                                                      \
     "\n "                                                               \
-    "\n If successful, periodogram creates an output table file containing " \
-    "\n period and power, prints \"[struct stat=\"OK\", msg=\"<msg>\"]\" to stdout, " \
-    "\n and exits with 0.  The output message contains the command line arguments" \
-    "\n needed to replicate the exact results, including derived quantities if any." \
+    "\n If successful, periodogram.py prints out a message containing " \
+    "\n the time elapsed, along with the command line arguments needed" \
+    "\n to replicate the exact results, including derived quantities if any." \
     "\n "                                                               \
     "\n Examples: "                                                     \
     "\n "                                                               \
-    "\n The following example runs periodogram on a table file with the period " \
-    "\n range from .5 days to 1000 days and saves the output to out.tbl: " \
+    "\n The following example runs periodogram.py on a data file with the period " \
+    "\n range from 0.5 days to 1000 days and saves the output to outFile: " \
     "\n "                                                               \
-    "\n $ periodogram test/test.txt -p .5 -P 1000 out"              \
+    "\n $ python3 periodogram.py -p 0.5 -P 1000 test/test.txt outFile"              \
     "\n "
 
 #######################
