@@ -1,11 +1,13 @@
-# Python periodogram code
+# Python multiprocessing periodogram code
 # Converted from C++ to Python by John Berberian, Jr.
 # Original C++ code by Peter Plavchan
-# This version does not implement multiprocessing
+# This version uses multiprocessing, but is very inefficient.
+# mp_periodogram.py is recommended over this program.
 # Meant to be run from the terminal with the command:
-# user@computer:~$ python3 periodogram.py [options] <InputFile>
+# user@computer:~$ python3 mp_alt.py [options] <InputFile>
 # For more information, run this with the option --help.
 
+import multiprocessing as mp
 import os
 import sys
 import time
@@ -18,42 +20,33 @@ from preferences import *
 t_i = time.time()
 
 
-# Algorithm Functions
+#######################
+##
+##  Algorithm Functions
+##
+#######################
+
+# assumes rectangular matrix
+def transpose(l):
+    n = []
+    for i in range(len(l)):
+        for j in range(len(l[0])):
+            if j == len(n):
+                n.append([l[i][j]])
+            else:
+                n[j].append(l[i][j])
+    return n
 
 
-# computeBLS()
-# Function to compute the BLS "periodogram"
+def makeArrOfCopies(inList, num):
+    bigArr = [[]] * num
+    for k in inList:
+        for i in range(len(bigArr)):
+            bigArr[i].append(k)
+    return bigArr
 
-# BLS = Box-fitting Least Squares
-# ref: Kovacs, G., Zucker, S. and Mazeh, T. "A box-fitting algorithm
-#     in the search for periodic transits." A&A 391:369-377 (2002).
-# http://adsabs.harvard.edu/abs/2002A%26A...391..369K
-# The BLS algorithm starts from the premise that for a specific fraction
-# of the period of an orbiting planet, the planet will transit in front
-# of its star.  This time during which the star's light is
-# obstructed ranges from qmin to qmax, expressed as a fraction of the
-# total period.
 
-# For each candidate period p, the number of bins (nbins) is considered
-# to span one period: each bin corresponds to a time span of p/nbins.
-
-# The observed data is "folded" to match the period: observations
-# at time t = p + dt are placed into the bin corresponding to dt.
-
-# A model in which the mean signal level in the occluded phase is L and
-# the level in the un-occluded phase is H is considered for each
-# candidate length of the L phase (qmin * nbins to qmax * nbins).  The
-# least squares fit is given by maximizing s**2/(r*(1-r)) where
-# s is the weighted sum of magnitudes in the low period and r
-# the sum of the weights in the low period.
-
-# Arguments:
-#  data = populated dataTbl object
-#  args = populated pgramArgs object
-#  fargs = funcArgs object with ndata, time, mag
-#               nsamp, and period set. power will
-#               be populated by this function
-def computeBLS(data, args, fargs):
+def computeBLS(data, args, fargs, pool):
     # Check for type errors
     if not isinstance(data, dataTbl):
         raise TypeError('Inappropriate argument type:\ndata must be of type dataTbl!')
@@ -61,6 +54,8 @@ def computeBLS(data, args, fargs):
         raise TypeError('Inappropriate argument type:\nfargs must be of type funcArgs!')
     if not isinstance(args, pgramArgs):
         raise TypeError('Inappropriate argument type:\nargs must be of type pgramArgs!')
+    if not isinstance(pool, mp.pool.Pool):
+        raise TypeError('Inappropriate argument type:\npool must be of type Pool!')
     [ndata, time] = funcArgsGetTime(fargs)
     [ndata, mag] = funcArgsGetMag(fargs)
     [nsamp, period] = funcArgsGetPeriods(fargs)
@@ -129,109 +124,66 @@ def computeBLS(data, args, fargs):
     binWt = [0.0] * binMax
 
     # Compute periodogram
-    p = 0.0  # period
-    maxPwr = 0.0  # max power found at this period
-    pwr = 0.0  # temporary power: to max over
-    for i in range(nsamp):
-        if TRACK_CYCLES:
-            print("BLS: starting cycle", i)
-        if i >= len(period):
-            print(i)
-            print(len(period))
-            print(nsamp)
-        p = period[i]
-        for b in range(nbins):
-            binMag[b] = 0.0
-            binWt[b] = 0.0
-        # "nbins" represents one period p, so enter wights and
-        # weighted magnitudes for each data point into the bin
-        # corresponding to time[j]
-        for j in range(ndata):
-            # fraction of the period elapsed at time time[j]
-            phase = math.fmod((time[j] / p), 1)
-
-            # bin corresponding to that phase
-            b = int(math.floor(nbins * phase))
-            binWt[b] += wt[j]
-            binMag[b] += wt[j] * mag[j]
-        # continue the min arrays to binMax -- we will refer to
-        # this extension of the period below
-        for b in range(nbins, binMax):
-            binWt[b] = binWt[b - nbins]
-            binMag[b] = binMag[b - nbins]
-        # Search for the "low" phase [presumed transit time] that maximizes
-        # pwr = (sumMag*sumMag)/(sumWt*(totalWt-sumWt)). The low phase
-        # will cover some number of bins from "minBins" to "binExt"
-        # (=qmax*nbins), so evaluate pwr for each candidate starting
-        # bin b in 0 to nbins and each number of additional bins
-        # from 0 to binExt
-        maxPwr = 0.0
-        for b in range(nbins):
-            # for each starting point in the base period, consider
-            # whether this might be the beginning of the "low" phase
-            binCt = 0
-            sumWt = 0.0
-            sumMag = 0.0
-
-            for k in range(b, b + binExt + 1):  # +1 to compensate for <= rather than <
-                binCt += 1
-                sumWt += binWt[k]  # "r" in paper
-                sumMag += binMag[k]  # "s" in paper
-                if binCt >= minBins and minWt <= sumWt < totalWt:
-                    pwr = (sumMag ** 2) / (sumWt * (totalWt - sumWt))
-                    if pwr >= maxPwr:
-                        maxPwr = pwr
-                        lowStart = b  # bin # at start of "low" phase
-                        lowEnd = k  # bin # at end of "low" phase
-                        lowWt = sumWt  # weight of this phase (r)
-                        lowMag = sumMag  # mag in this phase (s)
-
-        maxPwr = math.sqrt(maxPwr)
-
-        # Save the results (if we were able to compute them)
-        if maxPwr > 0:
-            power[i] = maxPwr
-            blsR[i] = lowWt / totalWt
-            blsS[i] = lowMag
-            lowBin0[i] = lowStart
-            lowBin1[i] = lowEnd
-    # All of these *should* have been linked, but no
-    # harm in setting them again.
-    fargs.power = power
-    fargs.blsR = blsR
-    fargs.blsS = blsS
-    fargs.lowBin0 = lowBin0
-    fargs.lowBin1 = lowBin1
+    results = pool.starmap(doBLS, transpose([[time] * nsamp, [mag] * nsamp, [wt] * nsamp, \
+                                             makeArrOfCopies(binWt, nsamp), \
+                                             makeArrOfCopies(binMag, nsamp), \
+                                             period, [nbins] * nsamp, [nsamp] * nsamp, \
+                                             [binExt] * nsamp, [minBins] * nsamp, \
+                                             [minWt] * nsamp, [totalWt] * nsamp]))
+    results = transpose(results)
+    fargs.power = results[0]
+    fargs.blsR = results[1]
+    fargs.blsS = results[2]
+    fargs.lowBin0 = results[3]
+    fargs.lowBin1 = results[4]
 
 
-# computeLombScargle()
-# Function to compute the Lomb-Scargle Periodogram for an input light curve
-#
-# ref: [Scargle, J.D., "Studies in Astronomical Time Series Analysis II.
-#     Statistical Aspects of Spectral Analysis of Unevenly Spaced Data."
-#     Astrophysical Journal 263:835-853 (1982)];
-#     http://adsabs.harvard.edu/full/1982ApJ...263..835S *\/
-#
-# Periods are sampled according to the time period covered, or based on
-# the input values of minperiod and maxperiod.
-#
-# The coefficients of the transform are selected so the statistical
-# distribution of powers for the unevenly spaced power spectrum is the
-# same as that of the evenly spaced one.
-#
-# At each period, a time offset is calculated to diagonalize the
-# least-squares fit to sinusoids in the transform.
-#
-# Power at period p is the magnitude of the transform at p.
-#
-# Arguments:
-#  data = populated dataTbl object
-#  args = populated pgramArgs object
-#  fargs = funcArgs object with ndata, time, mag
-#               nsamp, and period set. power will
-#               be populated by this function
-def computeLombScargle(data, args, fargs):
-    # Check for type errors
+# time and mag are arrs. binWt and binMag are working vars,
+# so they can't be shared. copies will have to be made for
+# each run of the function.
+def doBLS(time, mag, wt, binWt, binMag, period, nbins, nsamp, binExt, minBins, minWt, \
+          totalWt):
+    maxPwr = 0.0
+    for b in range(nbins):
+        binMag[b] = 0.0
+        binWt[b] = 0.0
+    ndata = len(time)
+    binMax = len(binWt)
+    for j in range(ndata):
+        phase = (time[j] / period) % 1
+        b = int(math.floor(nbins * phase))
+        binWt[b] += wt[j]
+        binMag[b] += wt[j] * mag[j]
+    for b in range(nbins, binMax):
+        binWt[b] = binWt[b - nbins]
+        binMag[b] = binMag[b - nbins]
+    maxPwr = 0.0
+    for b in range(nbins):
+        binCt = 0
+        sumWt = 0.0
+        sumMag = 0.0
+        for k in range(b, b + binExt + 1):
+            binCt += 1
+            sumWt += binWt[k]
+            sumMag += binMag[k]
+            if binCt >= minBins and sumWt >= minWt and \
+                    sumWt < totalWt:
+                pwr = (sumMag ** 2) / (sumWt * (totalWt - sumWt))
+                if pwr >= maxPwr:
+                    maxPwr = pwr
+                    lowStart = b
+                    lowEnd = k
+                    lowWt = sumWt
+                    lowMag = sumMag
+    maxPwr = math.sqrt(maxPwr)
+    if maxPwr > 0:
+        return (maxPwr, lowWt / totalWt, lowMag, lowStart, lowEnd)
+    return (0, 0, 0, 0, 0)
+
+
+def computeLombScargle(data, args, fargs, pool):
+    if not isinstance(pool, mp.pool.Pool):
+        raise TypeError('Inappropriate argument type:\npool must be of type Pool!')
     if not isinstance(data, dataTbl):
         raise TypeError('Inappropriate argument type:\ndata must be of type dataTbl!')
     if not isinstance(fargs, funcArgs):
@@ -247,76 +199,184 @@ def computeLombScargle(data, args, fargs):
     sdMag = dtGetDev(data, DATA_FIELD_TYPE.DATA_Y)
     if sdMag == 0:
         raise ValueError("Error in InputFile: Zero deviation in data values!")
+    results = pool.starmap(doLS, transpose([[time] * nsamp, [mag] * nsamp, [sdMag] * nsamp, period]))
+    fargs.power = results
 
-    # Compute periodogram
-    p = 0.0  # period
-    w = 0.0  # angular freq at period p
 
-    tnum, tdenom, t = 0.0, 0.0, 0.0
-    lnum, ldenom, rnum, rdenom = 0.0, 0.0, 0.0, 0.0
-    s, c = 0.0, 0.0
-    for i in range(nsamp):
-        if TRACK_CYCLES:
-            print("LS: starting cycle", i)
-        p = period[i]
+def doLS(time, mag, sdMag, p):
+    ndata = len(time)
+    w = 2 * math.pi / p
+    tnum = 0
+    tdenom = 0
+    for j in range(ndata):
+        tnum += math.sin(2.0 * w * time[j])
+        tdenom += math.cos(2.0 * w * time[j])
+    t = (1 / (2 * w)) * math.atan2(tnum, tdenom)
+    lnum = 0
+    ldenom = 0
+    rnum = 0
+    rdenom = 0
+    for j in range(ndata):
+        s = math.sin(w * (time[j] - t))
+        c = math.cos(w * (time[j] - t))
+        rnum += mag[j] * s
+        lnum += mag[j] * c
+        rdenom += s * s
+        ldenom += c * c
+    return (1 / (2 * sdMag * sdMag)) * ((lnum * lnum) / ldenom + (rnum * rnum / rdenom))
 
-        # angular frequency is 2*pi/p
-        w = 2 * math.pi / p
 
-        # identify time adustement tau for this frequency
-        tnum = 0
-        tdenom = 0
+def phaseLightCurve(time, mag, mySmooth, boxSize, p):
+    ndata = len(time)
+    mySort = []
+    myPhase = [0] * ndata
+    myMag = [0] * ndata
+    myChi = [0] * ndata
+    for j in range(ndata):
+        mySort.append([mod(time[j], p) / p, j])
+    mySort.sort()
+    for j in range(ndata):
+        myIdx = mySort[j][1]
+        myPhase[j] = mySort[j][0]
+        myMag[j] = mag[myIdx]
+        if mySmooth:
+            mySmooth[j] = -1
+        if j > 0 and myPhase[j] < myPhase[j - 1]:
+            print("Sort error?")
+    if mySmooth:
+        # Now smooth the phases:
+        #
+        # To reduce computation time, remember values from the
+        # last round. Specifically:
+
+        # Given that phase[j]>=phase[j-1] (data is sorted)
+
+        # If
+        # (phase[j-1] - phase[prevLo-1]) > smooth/2 then
+        # (phase[j] - phase[prevLo-1]) > smooth/2 and, generally,
+        # (phase[j] - phase[k]) > smooth/2 for any k<prevLo
+
+        # -> there's no need to consider any k<prevLo as the lower
+        # edge of the box.
+
+        # If
+        # (phase[prevHi] - phase[j-1]) <= smooth/2 then
+        # (phase[prevHi] - phase[j]) <= smooth/2 and, generally,
+        # (phase[k] - phase[j]) <= smooth/2 for any k <= prevHi
+
+        # -> there's no need to consider any k<prevHi as the upper
+        # edge of the box
+
+        ###
+
+        # "Wrapping":
+        # Phase-smoothing can still take place for values at the beginning
+        # or end of a period by "wrapping" around to the other end of the
+        # array. For example, we could smmoth values for phase 0 with
+        # those at phase 1-s, or values at phase 1 with those at
+        # phase 0+s. Since the assumption in phase-folding is that the
+        # signal is periodic, looking at the other end of the array is like
+        # wrapping around to the "next" or "previous" period
+        bLo = 0;
+        bHi = 0;
+        prevLo = 0;
+        prevHi = 0;
+        count = 0
+        boxSum = 0.0;
+        halfbox = boxSize / 2.0
+
         for j in range(ndata):
-            tnum += math.sin(2.0 * w * time[j])
-            tdenom += math.cos(2.0 * w * time[j])
-        t = (1 / (2 * w)) * math.atan2(tnum, tdenom)
+            if PHASE_WRAPPING:
+                # Determine value for bHi. If j=0, prevHi=0,
+                # thereafter updated to the largest index such
+                # that phase[bHi] - phase[j-1]<halfBox
+                for bHi in range(prevHi, 2 * ndata - 1):
+                    if bHi < (ndata - 1):
+                        if (myPhase[bHi + 1] - myPhase[j]) > halfbox:
+                            break
+                    else:
+                        # adjust index and phase range if we're off the
+                        # end of the array
+                        if (myPhase[bHi - ndata + 1] - myPhase[j] + 1) > halfbox:
+                            break
+                if (j == 0):
+                    # Get initial value for bLo for j=0: step back until
+                    # ndata + (bLo -1) is out of the range
+                    for bLo in range(0, -ndata, -1):  # +1 removed because of >=
+                        if (myPhase[j] - myPhase[ndata + bLo - 1] + 1) > halfbox:
+                            break
+                else:
+                    # once prevLo hase ben properly initialized (i.e. j>0),
+                    # start from prevLo and shift box as needed
+                    for bLo in range(prevLo, j):
+                        if bLo < 0:
+                            if (myPhase[j] - myPhase[ndata + bLo] + 1) < halfbox:
+                                break
+                        else:
+                            if (myPhase[j] - myPhase[bLo]) < halfbox:
+                                break
+            else:
+                # Find edges of box (no phase-wrapping)
+                for bLo in range(prevLo, j):
+                    if (myPhase[j] - myPhase[bLo]) < halfbox:
+                        break
+                for bHi in range(prevHi, ndata - 1):
+                    if (myPhase[bHi + 1] - myPhase[j]) > halfbox:
+                        break
+                if DEBUG:
+                    # check that the values for bLo and bHi satisfy
+                    # the conditions we were trying to meet
+                    if ((myPhase[bHi] - myPhase[j]) > halfbox) or \
+                            (((bHi + 1) < ndata) and ((myPhase[bHi + 1] - myPhase[j]) <= halfbox)) \
+                            or ((myPhase[j] - myPhase[bLo]) > halfbox) or \
+                            ((bLo > 0) and ((myPhase[j] - myPhase[bLo - 1]) <= halfbox)):
+                        print("BOX ERROR!")
 
-        # compute the coeffs at this frequency (using tau-adjusted day)
-        lnum = 0
-        ldenom = 0
-        rnum = 0
-        rdenom = 0
-        for j in range(ndata):
-            s = math.sin(w * (time[j] - t))
-            c = math.cos(w * (time[j] - t))
-            rnum += mag[j] * s
-            lnum += mag[j] * c
-            rdenom += s * s
-            ldenom += c * c
+            # Initialize the sum of magnitudes in our box. We will
+            # start fro scratch if j = 0 or if our new low edge is
+            # above our previous high edge
+            if (j == 0) or (bLo >= prevHi):
+                boxSum = 0
+                count = 0
+                for k in range(bLo, bHi + 1):  # shifted +1 due to <=
+                    if k < 0:
+                        myIdx = ndata + k
+                    elif k >= ndata:
+                        myIdx = k - ndata
+                    else:
+                        myIdx = k
+                    boxSum += myMag[myIdx]
+                    count += 1
+            else:
+                # if there is overlap between this box and the
+                # previous one, subtract off the left edge and
+                # add the right
+                for k in range(prevLo, bLo):
+                    if k < 0:
+                        myIdx = ndata + k
+                    else:
+                        myIdx = k
+                    boxSum -= myMag[myIdx]
+                    count -= 1
+                for k in range(prevHi + 1, bHi + 1):  # shifted+= due to <=
+                    if k >= ndata:
+                        myIdx = k - ndata
+                    else:
+                        myIdx = k
+                    boxSum += myMag[myIdx]
+                    count += 1
 
-        # compute the power at this frequency
-        power[i] = (1 / (2 * sdMag * sdMag)) * ((lnum * lnum) / ldenom + (rnum * rnum / rdenom))
-    # just to make sure that it's set, set fargs.power
-    # (this should have been linked, but just in case)
-    fargs.power = power
+            # save the values of bLo and bHi for the next value of j
+            prevLo = bLo
+            prevHi = bHi
+            if count > 0:
+                mySmooth[j] = boxSum / count
+                if myChi:
+                    myChi[j] = (myMag[j] - mySmooth[j]) ** 2
+    return myChi
 
 
-# computePlavchan()
-# Function to compute periodogram based on Plavchan 2008 algo
-#
-# ref: Peter Plavchan, M. Jura, J. Davy Kirkpatrick, Roc M. Cutri,
-#     and S. C. Gallagher, "NEAR-INFRARED VARIABILITY IN THE 2MASS
-#     CALIBRATION FIELDS: A SEARCH FOR PLANETARY TRANSIT CANDIDATES."
-#     ApJS 175:191Y228 (2008)
-#
-# For each of a set of candidate periods, this algorithm folds a light
-# curve to that period and then computes a "smoothed" curve by averaging
-# the curve over a box spanning a certain phase range to either side (defined
-# by the parameter "smooth").  The ratio of the sum of squared deviations
-# from the mean (over the "nout" worst-fitting points) is divided by
-# the sum of squared deviations from the smoothed values (again, over nout).
-# The smaller the deviation from the smoothed curve, the larger this ratio
-# will be, indicating that the smooth curve is a substantially better fit
-# than the straight line "mag = mean mag".  This ratio is interpreted as the
-# "power" at that period.
-#
-# Arguments:
-#  data = populated dataTbl object
-#  args = populated pgramArgs object
-#  fargs = funcArgs object with ndata, time, mag
-#               nsamp, and period set. power will
-#               be populated by this function
-def computePlavchan(data, args, fargs):
+def computePlavchan(data, args, fargs, pool):
     # Check for type errors
     if not isinstance(data, dataTbl):
         raise TypeError('Inappropriate argument type:\ndata must be of type dataTbl!')
@@ -327,11 +387,10 @@ def computePlavchan(data, args, fargs):
 
     [ndata, time] = funcArgsGetTime(fargs)
     [ndata, mag] = funcArgsGetMag(fargs)
+    [ndata, smooth] = funcArgsGetSmoothedMag(fargs)
     [nsamp, period] = funcArgsGetPeriods(fargs)
     [nsamp, power] = funcArgsGetPower(fargs)
     noutliers = args.nout
-    errval = 0.0  # negative sum of squares indicates error (but use
-    # 0 so weird things don't happend downstream!)
 
     # array to hold the deviation from the smoothed curve for each
     # data point
@@ -354,44 +413,32 @@ def computePlavchan(data, args, fargs):
         maxStd += tmpChi[j]
     maxStd /= noutliers
 
+    boxSize = fargs.boxSize
+
     # Compute periodogram
-    chisq = fargs.power  # local name for "power"
+    fargs.power = pool.starmap(doPlav, transpose([[time] * nsamp, [mag] * nsamp, \
+                                                  makeArrOfCopies(smooth, nsamp), \
+                                                  [boxSize] * nsamp, [maxStd] * nsamp, \
+                                                  [noutliers] * nsamp, period]))
 
-    # periods have been determined in wrapper function, just loop
-    for i in range(nsamp):
-        if TRACK_CYCLES:
-            print("PLV: starting cycle", i)
-        if len(period) < nsamp:
-            raise RuntimeError("Error in fargs.populate(): period is too short!")
-        if i >= nsamp:
-            raise RuntimeError("Error in for loop!")
-        fargs.p = period[i]
-        phaseLightCurve(fargs)
 
-        # Sort the chisq values and take the noutliers worst
-        # (largest) of them
-        tmpChi.sort()
-
-        count = 0
-        maxChi = 0
-        for j in range(ndata - 1, -1, -1):
-            if tmpChi[j] != errval:
-                maxChi += tmpChi[j]
-                count += 1
-                if count >= noutliers:
-                    break
-        # at this point count is the number of valid chisq values we found,
-        # <=noutliers
-        maxChi /= count
-
-        # save the values we'll ultimately return
-        if maxChi > 0:
-            chisq[i] = maxStd / maxChi
-        else:
-            chisq[i] = errval
-    # Again, this array *should* be linked, but there's no harm
-    # in setting it again.
-    fargs.power = chisq
+def doPlav(time, mag, mySmooth, boxSize, maxStd, noutliers, p):
+    ndata = len(time)
+    errval = 0
+    tmpChi = phaseLightCurve(time, mag, mySmooth, boxSize, p)
+    tmpChi.sort()
+    count = 0
+    maxChi = 0
+    for j in range(ndata - 1, -1, -1):
+        if tmpChi[j] != errval:
+            maxChi += tmpChi[j]
+            count += 1
+            if count >= noutliers:
+                break
+    maxChi /= count
+    if maxChi > 0:
+        return maxStd / maxChi
+    return errval
 
 
 #######################
@@ -952,186 +999,11 @@ def estimateProcessingTime(nsamp, ndata, args, qmax, algo):
     else:
         raise ValueError("PeriodogramType: invalid value " + algo)
     if timeEst == 0:
-        # this must have been a non-fatal error: note it
+        # this must have been a non-fata error: note it
         timeEst = -1
     else:
-        timeEst*=SCALING_FUNC(args.nproc)
+        timeEst *= SCALING_FUNC(args.nproc)
     return timeEst
-
-
-# Function to fold/phase a light curve to an input period.
-# Currently does smoothing based on args->smooth
-def phaseLightCurve(fargs):
-    if not isinstance(fargs, funcArgs):
-        raise TypeError('Inappropriate argument type:\nfargs must be of type funcArgs!')
-    p = fargs.p
-    myChi = None
-    mySmooth = None
-    [ndata, time] = funcArgsGetTime(fargs)
-    [ndata, mag] = funcArgsGetMag(fargs)
-    [ndata, myPhase] = funcArgsGetPhase(fargs)
-    [ndata, myMag] = funcArgsGetPhasedMag(fargs)
-    [ndata, mySort] = funcArgsGetSortable(fargs)
-    [ndata, mySmooth] = funcArgsGetSmoothedMag(fargs)
-    myChi = fargs.chi
-
-    mySort = []
-
-    # determine phase for each data point and sort arrays by it
-    for j in range(ndata):
-        # fraction of the period elapsed at time time[j] (=phase)
-        mySort.append([mod(time[j], p) / p, j])  # second index is to keep track
-        # of the movement of the elements
-    mySort.sort()
-
-    for j in range(ndata):
-        myIdx = mySort[j][1]
-        myPhase[j] = mySort[j][0]
-        myMag[j] = mag[myIdx]
-        if mySmooth != []:
-            mySmooth[j] = -1
-        if j > 0 and myPhase[j] < myPhase[j - 1]:
-            print("Sort error?")
-
-    if mySmooth != None:
-        # Now smooth the phases:
-        #
-        # To reduce computation time, remember values from the
-        # last round. Specifically:
-
-        # Given that phase[j]>=phase[j-1] (data is sorted)
-
-        # If
-        # (phase[j-1] - phase[prevLo-1]) > smooth/2 then
-        # (phase[j] - phase[prevLo-1]) > smooth/2 and, generally,
-        # (phase[j] - phase[k]) > smooth/2 for any k<prevLo
-
-        # -> there's no need to consider any k<prevLo as the lower
-        # edge of the box.
-
-        # If
-        # (phase[prevHi] - phase[j-1]) <= smooth/2 then
-        # (phase[prevHi] - phase[j]) <= smooth/2 and, generally,
-        # (phase[k] - phase[j]) <= smooth/2 for any k <= prevHi
-
-        # -> there's no need to consider any k<prevHi as the upper
-        # edge of the box
-
-        ###
-
-        # "Wrapping":
-        # Phase-smoothing can still take place for values at the beginning
-        # or end of a period by "wrapping" around to the other end of the
-        # array. For example, we could smmoth values for phase 0 with
-        # those at phase 1-s, or values at phase 1 with those at
-        # phase 0+s. Since the assumption in phase-folding is that the
-        # signal is periodic, looking at the other end of the array is like
-        # wrapping around to the "next" or "previous" period
-        bLo = 0;
-        bHi = 0;
-        prevLo = 0;
-        prevHi = 0;
-        count = 0
-        boxSum = 0.0;
-        halfbox = fargs.boxSize / 2.0
-
-        for j in range(ndata):
-            if PHASE_WRAPPING:
-                # Determine value for bHi. If j=0, prevHi=0,
-                # thereafter updated to the largest index such
-                # that phase[bHi] - phase[j-1]<halfBox
-                for bHi in range(prevHi, 2 * ndata - 1):
-                    if bHi < (ndata - 1):
-                        if (myPhase[bHi + 1] - myPhase[j]) > halfbox:
-                            break
-                    else:
-                        # adjust index and phase range if we're off the
-                        # end of the array
-                        if (myPhase[bHi - ndata + 1] - myPhase[j] + 1) > halfbox:
-                            break
-                if (j == 0):
-                    # Get initial value for bLo for j=0: step back until
-                    # ndata + (bLo -1) is out of the range
-                    for bLo in range(0, -ndata, -1):  # +1 removed because of >=
-                        if (myPhase[j] - myPhase[ndata + bLo - 1] + 1) > halfbox:
-                            break
-                else:
-                    # once prevLo hase ben properly initialized (i.e. j>0),
-                    # start from prevLo and shift box as needed
-                    for bLo in range(prevLo, j):
-                        if bLo < 0:
-                            if (myPhase[j] - myPhase[ndata + bLo] + 1) < halfbox:
-                                break
-                        else:
-                            if (myPhase[j] - myPhase[bLo]) < halfbox:
-                                break
-            else:
-                # Find edges of box (no phase-wrapping)
-                for bLo in range(prevLo, j):
-                    if (myPhase[j] - myPhase[bLo]) < halfbox:
-                        break
-                for bHi in range(prevHi, ndata - 1):
-                    if (myPhase[bHi + 1] - myPhase[j]) > halfbox:
-                        break
-                if DEBUG:
-                    # check that the values for bLo and bHi satisfy
-                    # the conditions we were trying to meet
-                    if ((myPhase[bHi] - myPhase[j]) > halfbox) or \
-                            (((bHi + 1) < ndata) and ((myPhase[bHi + 1] - myPhase[j]) <= halfbox)) \
-                            or ((myPhase[j] - myPhase[bLo]) > halfbox) or \
-                            ((bLo > 0) and ((myPhase[j] - myPhase[bLo - 1]) <= halfbox)):
-                        print("BOX ERROR!")
-
-            # Initialize the sum of magnitudes in our box. We will
-            # start fro scratch if j = 0 or if our new low edge is
-            # above our previous high edge
-            if (j == 0) or (bLo >= prevHi):
-                boxSum = 0
-                count = 0
-                for k in range(bLo, bHi + 1):  # shifted +1 due to <=
-                    if k < 0:
-                        myIdx = ndata + k
-                    elif k >= ndata:
-                        myIdx = k - ndata
-                    else:
-                        myIdx = k
-                    boxSum += myMag[myIdx]
-                    count += 1
-            else:
-                # if there is overlap between this box and the
-                # previous one, subtract off the left edge and
-                # add the right
-                for k in range(prevLo, bLo):
-                    if k < 0:
-                        myIdx = ndata + k
-                    else:
-                        myIdx = k
-                    boxSum -= myMag[myIdx]
-                    count -= 1
-                for k in range(prevHi + 1, bHi + 1):  # shifted+= due to <=
-                    if k >= ndata:
-                        myIdx = k - ndata
-                    else:
-                        myIdx = k
-                    boxSum += myMag[myIdx]
-                    count += 1
-
-            # save the values of bLo and bHi for the next value of j
-            prevLo = bLo
-            prevHi = bHi
-            if count > 0:
-                mySmooth[j] = boxSum / count
-                if myChi != None:
-                    myChi[j] = (myMag[j] - mySmooth[j]) * (myMag[j] - mySmooth[j])
-
-            # fargs.smoothedMag now contains the smoothed magnitudes based
-            #        on fargs.p
-            # fargs.chi contains the squared distance from the smoothed
-            # curve for each data point
-            # fargs.phase contains the phase for each point
-
-            # rows are sorted by fargs.phase, but fargs.sortable[n][1]
-            # contains the original index of each data point
 
 
 def findPeaks(args, fargs):
@@ -1384,12 +1256,14 @@ def computePgramStats(args, nsamp, sortedPower, peakWidth):
 # so the messy stuff getting data into the proper format
 # for each algo is already done. All that's left is
 # calling the algo functions
-def computePeriodogram(args, data, fargs):
+def computePeriodogram(args, data, fargs, pool):
     if not isinstance(args, pgramArgs):
         raise TypeError("Error: args must be of type pgramArgs!")
     if not isinstance(data, dataTbl):
         raise TypeError("Error: data must be of type dataTbl!")
     if not isinstance(fargs, funcArgs):
+        raise TypeError("Error: fargs must be of type funcArgs!")
+    if not isinstance(pool, mp.pool.Pool):
         raise TypeError("Error: fargs must be of type funcArgs!")
 
     # print out a time estimate, calculated earlier
@@ -1402,11 +1276,11 @@ def computePeriodogram(args, data, fargs):
     # compute the periodogram (results will go into
     # fargs.power)
     if args.algo == "ls":
-        computeLombScargle(data, args, fargs)
+        computeLombScargle(data, args, fargs, pool)
     elif args.algo == "bls":
-        computeBLS(data, args, fargs)
+        computeBLS(data, args, fargs, pool)
     elif args.algo == "plav":
-        computePlavchan(data, args, fargs)
+        computePlavchan(data, args, fargs, pool)
     else:
         print("Error: invalid algo! Somehow you bypassed the argument-population check on this...")
         print(PGRAM_HELP_TEXT)
@@ -1415,9 +1289,9 @@ def computePeriodogram(args, data, fargs):
 
 
 # New version of mod function, once I remembered
-# that python has a builtin from math
+# that python has a builtin
 def mod(n, m):
-    return math.fmod(n, m)
+    return n % m
 
 
 # Finds the smallest nonnegative
@@ -1532,9 +1406,6 @@ class pgramArgs:
         # Flag to label output files
         this.outLabeled = False
 
-        # Running in single-threaded mode, so 1.
-        this.nproc = 1
-
     # Function to parse arguments passed to the "periodogram"
     # command at the command line
     def populate(this):
@@ -1572,7 +1443,7 @@ class pgramArgs:
                 this.nbins = int(a[1])
                 nbSet = 1
             elif a[0] == '-c':
-                # not doing parallel processing right now.
+                # not doing paralell processing right now.
                 pass
             elif a[0] == '-d':
                 if float(a[1]) <= 0:
@@ -1919,7 +1790,7 @@ class pgramArgs:
         return this.outtbl
 
     def argsPrint(this):
-        arr = ['python3', 'periodogram.py']
+        arr = ['python3', 'mp_alt.py']
         if this.algo:
             arr.append('-a')
             arr.append(str(this.algo))
@@ -2641,16 +2512,17 @@ PGRAM_HELP_TEXT = "\n\n Description:  " \
                   "\n " \
                   "\n Results: " \
                   "\n " \
-                  "\n If successful, periodogram.py prints out a message containing " \
-                  "\n the time elapsed, along with the command line arguments needed" \
-                  "\n to replicate the exact results, including derived quantities if any." \
+                  "\n If successful, periodogram creates an output table file containing " \
+                  "\n period and power, prints \"[struct stat=\"OK\", msg=\"<msg>\"]\" to stdout, " \
+                  "\n and exits with 0.  The output message contains the command line arguments" \
+                  "\n needed to replicate the exact results, including derived quantities if any." \
                   "\n " \
                   "\n Examples: " \
                   "\n " \
-                  "\n The following example runs periodogram.py on a data file with the period " \
-                  "\n range from 0.5 days to 1000 days and saves the output to outFile: " \
+                  "\n The following example runs periodogram on a table file with the period " \
+                  "\n range from .5 days to 1000 days and saves the output to out.tbl: " \
                   "\n " \
-                  "\n $ python3 periodogram.py -p 0.5 -P 1000 test/test.txt outFile" \
+                  "\n $ periodogram test/test.txt -p .5 -P 1000 out" \
                   "\n "
 
 #######################
@@ -2659,47 +2531,55 @@ PGRAM_HELP_TEXT = "\n\n Description:  " \
 ##
 #######################
 
-# Construct and populate the pgramArgs object
-args = pgramArgs()
-args.populate()
+if __name__ == '__main__':
+    with mp.Pool(processes=mp.cpu_count()) as pool:
+        # Construct and populate the pgramArgs object
+        args = pgramArgs()
+        args.populate()
 
-# Get the output file stream
-if args.outToStdOut:
-    out = sys.stdout
-else:
-    fname = args.getOutputFile()
-    if fname == None:
-        print(args.getInBase())
-        print(args.getOutBase())
-        print(args.getOutputFile())
-    out = open(fname, 'w+')
+        # Get the output file stream
+        if args.outToStdOut:
+            out = sys.stdout
+        else:
+            fname = args.getOutputFile()
+            if fname == None:
+                print(args.getInBase())
+                print(args.getOutBase())
+                print(args.getOutputFile())
+            out = open(fname, 'w+')
 
-# Construct and populate the dataTbl object
-data = dataTbl()
-data.populate(args.intbl, args.xcol, args.ycol, args.yerrCol, \
-              args.constraintCol, args.constraintMin, args.constraintMax, args.inputDelimiter)
+        # Construct and populate the dataTbl object
+        data = dataTbl()
+        data.populate(args.intbl, args.xcol, args.ycol, args.yerrCol, \
+                      args.constraintCol, args.constraintMin, args.constraintMax, args.inputDelimiter)
 
-# Construct and populate the funcArgs object
-fargs = funcArgs()
-fargs.populate(args, data)
+        # Construct and populate the funcArgs object
+        fargs = funcArgs()
+        fargs.populate(args, data)
 
-# Compute the periodogram
-computePeriodogram(args, data, fargs)
+        # Compute the periodogram
+        computePeriodogram(args, data, fargs, pool)
 
-# Save the output
-if args.outLabeled == 1:
-    saveLabeledOutput(out, fargs.period, fargs.power, "PERIOD", 'POWER', args.inputDelimiter)
-else:
-    saveOutput(out, fargs.period, fargs.power, args.inputDelimiter)
-if not args.outToStdOut:
-    out.close()
-print("All done!")
-print("Here is the command to reconstruct this:")
-print(args.argsPrint())
+        # Save the output
+        if args.outLabeled == 1:
+            saveLabeledOutput(out, fargs.period, fargs.power, "PERIOD", 'POWER', args.inputDelimiter)
+        else:
+            saveOutput(out, fargs.period, fargs.power, args.inputDelimiter)
+        if not args.outToStdOut:
+            out.close()
+        print("All done!")
+        print("Here is the command to reconstruct this:")
+        print(args.argsPrint())
 
-# "stop" the timer
-t_f = time.time()
-t_d = t_f - t_i
-if PRINT_TIMES:
-    # Print the result from our timer
-    print("Time elapsed: " + format(t_d, '.4f') + " seconds (" + format(t_d / 60, '.4f') + " minutes)")
+        # "stop" the timer
+        t_f = time.time()
+        t_d = t_f - t_i
+        if PRINT_TIMES:
+            # Print the result from our timer
+            print("Time elapsed: " + format(t_d, '.4f') + " seconds (" + format(t_d / 60, '.4f') + " minutes)")
+
+##def multiFunc(a,b,c):
+##    return a/b,c
+##if __name__=='__main__':
+##    with mp.Pool(4) as pool:
+##        results=pool.starmap(multiFunc,transpose([range(10),range(1,11),range(2,12)]))
