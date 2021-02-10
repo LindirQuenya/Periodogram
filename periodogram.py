@@ -15,140 +15,6 @@ import time
 #"start" the timer
 t_i=time.time()
 
-#######################
-##
-##  User set flags
-##
-#######################
-
-#Flag to enable phase-wrapping in phaseLightCurve()
-#Default:True
-PHASE_WRAPPING=True
-
-#For some extra print statements, etc.
-#Default:False
-DEBUG=False
-
-#For BLS, to weight the data points
-#according to their uncertainty.
-#Default:False
-WEIGHT_BY_ERR=False
-
-#To restrict periods to those that we could observe
-#in their entirety.
-#Default:False
-RESTRICT_TO_COMPLETELY_OBSERVABLE=False
-
-#To make minperiod default to the average space
-#between data points.
-#Default:False
-AVG_TIME_STEP=False
-
-#To use the smallest space between two data points
-#as minperiod
-#Default:False
-SMALLEST_TIME_STEP=False
-
-#Flag indicating whether we should offset the periods
-#returned by the assorted methods to the range
-#specified by minperiod-maxperiod (as opposed to
-#omitting periods that lie outside the range)
-#Default:False
-ADJUST_PERIOD_TO_RANGE=False
-
-#Flag to fit a lognormal distribution to the powers
-#returned by BLS
-#Default:False
-USE_LOGNORMAL_BLS=False
-
-#Flag to ensure that multiple points do not represent
-#each peak in computPgramStats()
-#Default:False
-TRIM_DISTRIBUTION=False
-
-#Flag to trim outliers or not
-#Default:False
-TRIM_OUTLIERS=False
-
-#Flag to activate print statements that show which
-#cycle is currently being completed. Warning:
-#generates a lot of output.
-#Default:False
-TRACK_CYCLES=False
-
-#Flag to print a time estimate before running,
-#and the actual elapsed time afterwards. Disable
-#if you don't want those messages printing.
-#Default:True
-PRINT_TIMES = True
-#######################
-##
-##  User-set values
-##
-#######################
-
-#Minimum acceptable internally-calculated minperiod value
-#Default:0.1
-MIN_MINPERIOD=0.1
-
-#Maximum number of standard deviations away from the mean
-#a peice of data can be, and not be labeled an outlier.
-#Default:2.5
-NORMAL_OUTLIER=2.5
-
-#Maximum fraction of the data that can be labeled as
-#an outlier
-#Default:0.1
-MAX_TRIM_FRACTION=0.1
-
-#Maximum number of iterations for statTrimOutliers()
-#Default:10
-MAX_ITERATIONS=10
-#######################
-##
-##  Constants
-##
-#######################
-UNSET_VALUE=-32768
-MAXSTR=32768
-TINY_NUM=0.0000001
-UNSET_MEAN=-1e7
-
-#Derived from running on Peter's cluster @ 2.8 GHz.
-#Adjust as needed.
-BLS_T0=1.39e-6
-LS_T0=1.964e-6
-PLAV_T0=7.878398e-7
-DO_PROFILE=False
-
-#######################
-##
-##  pgramArgs Defaults
-##
-#######################
-DEFAULT_HDU = UNSET_VALUE
-DEFAULT_CONSTRAINT = UNSET_VALUE
-DEFAULT_MAXPERIOD = UNSET_VALUE
-DEFAULT_MINPERIOD = UNSET_VALUE
-DEFAULT_PSTEP = "exp" 
-DEFAULT_OVERSAMPLE = 1
-DEFAULT_SUBSTEP = 0.10
-DEFAULT_DFREQ = UNSET_VALUE
-DEFAULT_NOUT = 500
-DEFAULT_SMOOTH = 0.06
-DEFAULT_NPHASED = 50
-DEFAULT_SIG_THRESH = 1.0
-DEFAULT_POW_NUM = UNSET_VALUE
-DEFAULT_POW_MEAN = UNSET_VALUE
-DEFAULT_POW_SD = UNSET_VALUE
-DEFAULT_ALGO="bls"
-DEFAULT_NBINS=-32768
-DEFAULT_QMIN=0.05
-DEFAULT_QMAX=0.10
-DEFAULT_DELIMITER=','
-
-MIN_NDATA=2
-
 
 #######################
 ##
@@ -217,7 +83,7 @@ def computeBLS(data,args,fargs):
         if WEIGHT_BY_ERR:
             wt.append(err[j])
         else:
-            #If we don't, weight everthing the same
+            #If we don't, weight everything the same
             wt.append(1)
         totalWt+=wt[j]
 
