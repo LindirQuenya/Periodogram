@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Python multiprocessing periodogram code
 # Converted from C++ to Python by John Berberian, Jr.
 # Original C++ code by Peter Plavchan
@@ -7,7 +9,6 @@
 # user@computer:~$ python3 mp_alt.py [options] <InputFile>
 # For more information, run this with the option --help.
 
-import multiprocessing as mp
 import os
 import sys
 import time

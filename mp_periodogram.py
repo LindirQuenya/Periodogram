@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Python multiprocessing periodogram code
 # Converted from C++ to Python by John Berberian, Jr.
 # Original C++ code by Peter Plavchan
