@@ -5,6 +5,7 @@
 
 import multiprocessing as mp
 import math
+from enum import IntEnum
 
 # These are the scaling factors for estimating how long it
 # will take the program to run. They were derived on a
@@ -24,6 +25,15 @@ UNSET_VALUE = -32768
 MAXSTR = 32768
 TINY_NUM = 0.0000001
 UNSET_MEAN = -1e7
+# This class determines which index for every column of dataArray
+# signifies each type of data
+class DATA_FIELD_TYPE(IntEnum):
+    DATA_X = 0
+    DATA_X_UNCERTAINTY = 1
+    DATA_Y = 2
+    DATA_Y_UNCERTAINTY = 3
+    DATA_CONSTRAINT = 4
+    DATA_N_TYPES = 5
 
 # These are some default values for CLI argument parsing.
 DEFAULT_HDU = UNSET_VALUE

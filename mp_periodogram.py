@@ -9,14 +9,13 @@
 # user@computer:~$ python3 mp_periodogram.py [options] <InputFile>
 # For more information, run this with the option --help.
 
-import multiprocessing as mp
 import os
 import sys
 import time
-from enum import IntEnum
 from getopt import getopt
-from constants import *
-from preferences import *
+
+from func_args import *
+from data_table import *
 
 # "start" the timer
 t_i = time.time()
@@ -84,10 +83,11 @@ def computeBLS(data, args, fargs, pool):
         raise TypeError('Inappropriate argument type:\nargs must be of type pgramArgs!')
     if not isinstance(pool, mp.pool.Pool):
         raise TypeError('Inappropriate argument type:\npool must be of type Pool!')
-    [ndata, time] = funcArgsGetTime(fargs)
-    [ndata, mag] = funcArgsGetMag(fargs)
-    [nsamp, period] = funcArgsGetPeriods(fargs)
-    [nsamp, power] = funcArgsGetPower(fargs)
+    time = fargs.getTime()
+    mag = fargs.getMag()
+    period = fargs.getPeriod()
+    ndata = len(time)
+    nsamp = len(period)
 
     # Initializes variables with nonsense values
     blsR = [0.0] * nsamp
@@ -151,7 +151,7 @@ def computeBLS(data, args, fargs, pool):
     myArgList = []
     startArr, endArr = getSplitNums(nsamp, pool._processes)
     for i in range(len(startArr)):
-        myArgList.append([time, mag, wt, period, nbins, binExt, minBins, minWt, \
+        myArgList.append([time, mag, wt, period, nbins, binExt, minBins, minWt,
                           totalWt, binMax, startArr[i], endArr[i]])
 
     # Compute periodogram
@@ -173,14 +173,14 @@ def computeBLS(data, args, fargs, pool):
 
 
 # stopNum is exclusive
-def splitBLS(time, mag, wt, period, nbins, binExt, minBins, minWt, totalWt, binMax, \
+def splitBLS(time, mag, wt, period, nbins, binExt, minBins, minWt, totalWt, binMax,
              startNum, stopNum):
     nsamp = len(period)
     res = []
     for i in range(startNum, stopNum):
         binWt = [0.0] * binMax
         binMag = [0.0] * binMax
-        res.append(doBLS(time, mag, wt, binWt, binMag, period[i], nbins, nsamp, binExt, \
+        res.append(doBLS(time, mag, wt, binWt, binMag, period[i], nbins, nsamp, binExt,
                          minBins, minWt, totalWt))
     return res
 
@@ -188,7 +188,7 @@ def splitBLS(time, mag, wt, period, nbins, binExt, minBins, minWt, totalWt, binM
 # time and mag are arrs. binWt and binMag are working vars,
 # so they can't be shared. copies will have to be made for
 # each run of the function.
-def doBLS(time, mag, wt, binWt, binMag, period, nbins, nsamp, binExt, minBins, minWt, \
+def doBLS(time, mag, wt, binWt, binMag, period, nbins, nsamp, binExt, minBins, minWt,
           totalWt):
     maxPwr = 0.0
     for b in range(nbins):
@@ -213,8 +213,7 @@ def doBLS(time, mag, wt, binWt, binMag, period, nbins, nsamp, binExt, minBins, m
             binCt += 1
             sumWt += binWt[k]
             sumMag += binMag[k]
-            if binCt >= minBins and sumWt >= minWt and \
-                    sumWt < totalWt:
+            if binCt >= minBins and minWt <= sumWt < totalWt:
                 pwr = (sumMag ** 2) / (sumWt * (totalWt - sumWt))
                 if pwr >= maxPwr:
                     maxPwr = pwr
@@ -224,8 +223,8 @@ def doBLS(time, mag, wt, binWt, binMag, period, nbins, nsamp, binExt, minBins, m
                     lowMag = sumMag
     maxPwr = math.sqrt(maxPwr)
     if maxPwr > 0:
-        return (maxPwr, lowWt / totalWt, lowMag)  # ,lowStart,lowEnd)
-    return (0, 0, 0)  # ,0,0)
+        return maxPwr, lowWt / totalWt, lowMag  # ,lowStart,lowEnd)
+    return 0, 0, 0  # ,0,0)
 
 
 def computeLombScargle(data, args, fargs, pool):
@@ -237,10 +236,10 @@ def computeLombScargle(data, args, fargs, pool):
         raise TypeError('Inappropriate argument type:\nfargs must be of type funcArgs!')
     if not isinstance(args, pgramArgs):
         raise TypeError('Inappropriate argument type:\nargs must be of type pgramArgs!')
-    [ndata, time] = funcArgsGetTime(fargs)
-    [ndata, mag] = funcArgsGetMag(fargs)
-    [nsamp, period] = funcArgsGetPeriods(fargs)
-    [nsamp, power] = funcArgsGetPower(fargs)
+    time = fargs.getTime()
+    mag = fargs.getMag()
+    period = fargs.getPeriod()
+    nsamp = len(period)
 
     # Compute stats on magnitude
     sdMag = dtGetDev(data, DATA_FIELD_TYPE.DATA_Y)
@@ -443,17 +442,17 @@ def computePlavchan(data, args, fargs, pool):
         raise TypeError('Inappropriate argument type:\nfargs must be of type funcArgs!')
     if not isinstance(args, pgramArgs):
         raise TypeError('Inappropriate argument type:\nargs must be of type pgramArgs!')
-
-    [ndata, time] = funcArgsGetTime(fargs)
-    [ndata, mag] = funcArgsGetMag(fargs)
-    [ndata, smooth] = funcArgsGetSmoothedMag(fargs)
-    [nsamp, period] = funcArgsGetPeriods(fargs)
-    [nsamp, power] = funcArgsGetPower(fargs)
+    time = fargs.getTime()
+    mag = fargs.getMag()
+    period = fargs.getPeriod()
+    smooth = fargs.getSmoothedMag()
+    ndata = len(time)
+    nsamp = len(period)
     noutliers = args.nout
 
     # array to hold the deviation from the smoothed curve for each
     # data point
-    [ndata, tmpChi] = funcArgsGetChi(fargs)
+    tmpChi = fargs.getChi()
 
     # make sure we don't have more outliers than we have data points
     if noutliers > ndata:
@@ -514,74 +513,6 @@ def doPlav(time, mag, mySmooth, boxSize, maxStd, noutliers, p):
     return errval
 
 
-#######################
-##
-##  Fargs Getter functions
-##
-#######################
-# Returns [fargs.ndata,fargs.time]
-def funcArgsGetTime(fargs):
-    if not isinstance(fargs, funcArgs):
-        raise TypeError('Inappropriate argument type:\nfargs must be of type funcArgs!')
-    return [fargs.ndata, fargs.time]
-
-
-# Returns [fargs.ndata,fargs.mag]
-def funcArgsGetMag(fargs):
-    if not isinstance(fargs, funcArgs):
-        raise TypeError('Inappropriate argument type:\nfargs must be of type funcArgs!')
-    return [fargs.ndata, fargs.mag]
-
-
-# Returns [fargs.ndata,fargs.period]
-def funcArgsGetPeriods(fargs):
-    if not isinstance(fargs, funcArgs):
-        raise TypeError('Inappropriate argument type:\nfargs must be of type funcArgs!')
-    return [fargs.nsamp, fargs.period]
-
-
-# Returns [fargs.ndata,fargs.power]
-def funcArgsGetPower(fargs):
-    if not isinstance(fargs, funcArgs):
-        raise TypeError('Inappropriate argument type:\nfargs must be of type funcArgs!')
-    return [fargs.nsamp, fargs.power]
-
-
-# Returns [fargs.ndata,fargs.chi]
-def funcArgsGetChi(fargs):
-    if not isinstance(fargs, funcArgs):
-        raise TypeError('Inappropriate argument type:\nfargs must be of type funcArgs!')
-    return [fargs.ndata, fargs.chi]
-
-
-# Returns [fargs.ndata,fargs.phase]
-def funcArgsGetPhase(fargs):
-    if not isinstance(fargs, funcArgs):
-        raise TypeError('Inappropriate argument type:\nfargs must be of type funcArgs!')
-    return [fargs.ndata, fargs.phase]
-
-
-# Returns [fargs.ndata,fargs.phasedMag]
-def funcArgsGetPhasedMag(fargs):
-    if not isinstance(fargs, funcArgs):
-        raise TypeError('Inappropriate argument type:\nfargs must be of type funcArgs!')
-    return [fargs.ndata, fargs.phasedMag]
-
-
-# Returns [fargs.ndata,fargs.smoothedMag]
-def funcArgsGetSmoothedMag(fargs):
-    if not isinstance(fargs, funcArgs):
-        raise TypeError('Inappropriate argument type:\nfargs must be of type funcArgs!')
-    return [fargs.ndata, fargs.smoothedMag]
-
-
-# Returns [fargs.ndata,fargs.sortable]
-def funcArgsGetSortable(fargs):
-    if not isinstance(fargs, funcArgs):
-        raise TypeError('Inappropriate argument type:\nfargs must be of type funcArgs!')
-    return [fargs.ndata, fargs.sortable]
-
-
 # funcArgsGetPeakWidth()
 # Function to compute and return the start and end+1 indices of each "peak."
 # width[i][0] is the starting index of the current peak and width[i][1] is
@@ -597,7 +528,8 @@ def funcArgsGetPeakWidth(fargs, useLog):
     sigLevel = 0
 
     # retrieve power array
-    [nsamp, power] = funcArgsGetPower(fargs)
+    power = fargs.getPower()
+    nsamp = len(power)
 
     if useLog:
         tmp = []
@@ -674,7 +606,7 @@ def dtGetFilteredArray(t, f):
     refArray = dtGetArray(t, f)
     myArray = []
     for i in range(t.ndata):
-        if t.omitRow == None or not t.omitRow[i]:
+        if t.omitRow is None or not t.omitRow[i]:
             myArray.append(refArray[i])
     return myArray
 
@@ -804,112 +736,7 @@ def setDev(t, f, d):
     t.sd[f] = d
 
 
-#######################
-##
-##  Statistical functions
-##
-#######################
 
-# Returns the mean of arr, filtering unusable data points specified by omitRow:
-# if omitRow[n] is nonzero, row n should be ignored.
-def statMedian(arr, omitRow):
-    if not isinstance(arr, list):
-        raise TypeError("Inappropriate argument type:\narr must be a list!")
-    if len(arr) <= 0:
-        raise IndexError("Inappropriate index:\ncannot find the median of an empty list!")
-    tmp = []
-    count = 0
-    for i in range(len(arr)):
-        if omitRow == None or omitRow[i] == 0:
-            tmp.append(arr[i])
-            count += 1
-    if count <= 0:
-        raise ValueError("No usable points in array!")
-    tmp.sort()
-    if count % 2 == 1:
-        md = tmp[int(count - 1) / 2]
-    else:
-        md = (tmp[int(count / 2) - 1] + tmp[int(count / 2)]) / 2.0
-    return md
-
-
-# Returns the mean of arr. Filters bad data specified by omitRow
-def statMean(arr, omitRow):
-    if not isinstance(arr, list):
-        raise TypeError("Inappropriate argument type:\narr must be a list!")
-    if len(arr) <= 0:
-        raise IndexError("Inappropriate index:\ncannot find the mean of an empty list!")
-    if omitRow:
-        arr1 = [arr[i] for i in range(len(arr)) if not omitRow[i]]
-    else:
-        arr1 = arr
-    return sum(arr1) / len(arr1)
-
-
-# Returns the standard deviation of an array
-# Filters bad data specified by omitRow
-def statStdDev(inArr, omitRow):
-    if omitRow:
-        arr = [inArr[i] for i in range(len(inArr)) if not omitRow[i]]
-    else:
-        arr = inArr
-    s = sum(arr)
-    sumsq = 0
-    for i in arr:
-        sumsq += i ** 2
-    if len(arr) <= 0:
-        raise ValueError("Cannot find standard deviation of empty array!")
-    # "divide by n" method
-    ##return math.sqrt(len(arr)*sumsq-s**2)/len(arr)
-    if len(arr) > 1:
-        diff = sumsq - (s * s / len(arr))
-        if diff < 0:
-            if diff > TINY_NUM:
-                raise RuntimeError("Calculation error in std dev!")
-            else:
-                diff = 0
-        return math.sqrt(diff / (len(arr) - 1))
-    else:
-        # Non-fatal error, note it.
-        return -1
-
-
-# statTrimOuliers()
-# remove outliers from the input array, where an outlier is defined
-# as a value more than "threshold" standard deviations from the mean.
-# if more than maxFract samples are removed, terminate
-def statTrimOutliers(length, x, threshold, maxFract):
-    nout = 100
-    minCount = int(math.ceil((1.0 - maxFract) / length))
-
-    x1 = [0.0] * length
-    x2 = [0.0] * length
-    its = 0
-    for i in range(length):
-        x1[i] = x[i]
-    while (nout > 1) and (its < MAX_ITERATIONS):
-        its += 1
-        nout = 0
-        nin = 0
-        mean = statMean(x1, None)
-        sd = statStdDev(x1, None)
-        if sd <= 0:
-            # something went wrong
-            raise RuntimeError("Calculation error in std dev!")
-        for i in range(length):
-            if abs((x1[i] - mean) / sd) <= threshold:
-                x2[nin] = x1[i]
-                nin += 1
-        # accept this iteration if we have at least minCount samples
-        if nin > minCount:
-            out = length - nin
-            length = nin
-            for i in range(length):
-                x1[i] = x2[i]
-        else:
-            break
-    x1 = x1[:length]
-    return length, x1, mean, sd
 
 
 #######################
@@ -1103,10 +930,9 @@ def findPeaks(args, fargs):
         raise ValueError("Invalid periodogram type: " + args.algo)
 
     # Retrieve data from fargs
-    [ndata, time] = funcArgsGetTime(fargs)
-    [ndata, mag] = funcArgsGetMag(fargs)
-    [nsamp, period] = funcArgsGetPeriods(fargs)
-    [nsamp, power] = funcArgsGetPower(fargs)
+    period = fargs.getPeriod()
+    power = fargs.getPower()
+    nsamp = len(period)
 
     # determine the width of each peak
     width = funcArgsGetPeakWidth(fargs, (isPlav or (USE_LOGNORMAL_BLS and isBls)))
@@ -1974,475 +1800,6 @@ class pgramArgs:
         for i in range(1, len(arr)):
             string += ' ' + arr[i]
         return string
-
-
-# Class to hold the arguments that will be passed in
-# and out of a periodogram function call. Will also be
-# used to store utility arrays
-class funcArgs:
-    def __init__(this):
-        # populated by populateLite() before calling
-        # specific algorithms
-        this.ndata = 0
-        this.time = None
-        this.mag = None
-
-        # these arguments are set based on pstepType and
-        # associated command-line arguments
-        this.nsamp = 0
-        this.period = None
-
-        this.timeEst = -1
-
-        # populated by the specific algorithm
-        this.power = None
-
-        # start/end index of each peak
-        this.width = None
-
-        # BLS results... incase anyone wants to know where the phase
-        # bounds of the transit were
-        this.blsS = None
-        this.blsR = None
-        this.lowBin0 = None
-        this.lowBin1 = None
-
-        # From input arguments
-        this.boxSize = None
-
-        # reusable arrays, recomputed during
-        # each call to phaseLightCurve based
-        # on the value of p
-        this.p = 0
-
-        # the following are sorted by phase
-        this.phase = None
-        this.phasedMag = None
-        this.smoothedMag = None
-        this.chi = None  # for use by plav
-
-        # sortable will hold the original order of the last array sorted
-        this.sortable = None
-
-    # populateLite()
-    # Function to import time and mag (possibly adjusted by minDay and
-    # meanMag) into the funcArgs object. This will be called by populate()
-    def populateLite(this, algo, data):
-
-        # Retrieve data for processing: number of points, day and mag
-        time = dtGetFilteredArray(data, DATA_FIELD_TYPE.DATA_X)
-        mag = dtGetFilteredArray(data, DATA_FIELD_TYPE.DATA_Y)
-        if len(time) != len(mag):
-            raise RuntimeError("Houston, we have a problem. len(mag)!=len(time).")
-        ndata = len(time)
-
-        # Adjust the local copy of the data as appropirate for the different
-        # algorithms
-        meanMag = 0.0;
-        minDay = 0.0
-        adjustByMean = 0
-        adjustByMinDay = 0
-
-        if algo == "ls":
-            adjustByMean = 1
-        elif algo == "bls":
-            adjustByMean = 1
-            adjustByMinDay = 1
-        elif algo == "plav":
-            pass
-        else:
-            raise ValueError("Inappropriate value for algo:\n" + algo)
-
-        if adjustByMean or adjustByMinDay:
-            if adjustByMean:
-                meanMag = dtGetMean(data, DATA_FIELD_TYPE.DATA_Y)
-            if adjustByMinDay:
-                minDay = dtGetMin(data, DATA_FIELD_TYPE.DATA_X)
-            for i in range(ndata):
-                if adjustByMean:
-                    mag[i] -= meanMag
-                if adjustByMinDay:
-                    time[i] -= minDay
-
-        this.ndata = ndata
-        this.time = time
-        this.mag = mag
-
-    # populate()
-
-    # Function to import time and mag (possibly adjusted by minDay and
-    # meanMag) into the funcArgs object. In addition, input arguments
-    # will be used to set the periods at which we will compute power in
-    # computePeriodogram(). Calls populateLite()
-    def populate(this, args, data):
-        # set algo for populateLite (could just feed it args.algo,
-        # but it's nice to have a local version.)
-        algo = args.algo
-
-        # populate and adjust time and mag
-        this.populateLite(algo, data)
-        ndata = this.ndata
-        time = this.time
-        mag = this.mag
-
-        dell = TINY_NUM
-
-        # We have set an extremely mild restriction: require at least 2
-        # points in the file
-        if ndata < MIN_NDATA:
-            raise ValueError("InputFile: Not enough data in file to process: " + str(ndata))
-
-        # Get minimum and maximum time values, along with the smallest
-        # time-difference between two data points
-        minDay = dtGetMin(data, DATA_FIELD_TYPE.DATA_X)
-        maxDay = dtGetMax(data, DATA_FIELD_TYPE.DATA_X)
-        minDt = dtGetMinDiff(data, DATA_FIELD_TYPE.DATA_X)
-
-        # run a sanity check on the data
-        if minDay >= maxDay:
-            raise ValueError("InputFile: minimum time is >= maximum time!")
-
-        # compute min and max periods from data if not set from cmdline
-        minperiod = args.minperiod
-        maxperiod = args.maxperiod
-        if maxperiod == DEFAULT_MAXPERIOD:
-            maxperiod = maxDay - minDay
-        # If we want to restrict to periods that we could actually observe
-        # in their entirety
-        elif RESTRICT_TO_COMPLETELY_OBSERVABLE:
-            if maxperiod > (maxDay - minDay):
-                raise ValueError("PeriodRangeMax: Periods should not exceed time spanned " + str(maxDay - minDay))
-
-        if minperiod == DEFAULT_MINPERIOD:
-            # median time step
-            minperiod = dtGetMedianDiff(data, DATA_FIELD_TYPE.DATA_X)
-
-            if AVG_TIME_STEP:
-                # average time step
-                minperiod = (maxDay - minDay) / ndata
-
-            if SMALLEST_TIME_STEP:
-                # smallest time step
-                if minDt == 0:
-                    print("ERROR: Min DT = 0... dtGetMinDiff error bypass?")
-                    minperiod = maxperiod / ndata
-                else:
-                    minperiod = minDt
-
-            if minperiod < MIN_MINPERIOD:
-                minperiod = MIN_MINPERIOD
-        # check that max is greater than min
-        if minperiod > maxperiod or minperiod <= 0 or maxperiod <= 0:
-            if args.asFreq:
-                raise ValueError("FrequencyRangeMin: frequency range error: from " + str(1 / maxperiod) + " to " + str(
-                    1 / minperiod))
-            else:
-                raise ValueError("PeriodRangeMin: period range error: from " + str(minperiod) + " to " + str(maxperiod))
-
-        # Finally, set minperiod and maxperiod
-        args.minperiod = minperiod
-        args.maxperiod = maxperiod
-
-        # Period stepping
-
-        # What type of steppin are we doing and how many periods
-        # will we be considering?
-        ptype = args.pstepType
-        oversample = args.oversample
-
-        period = []
-        count = 0
-
-        # If we're not reading the periods from a file, generate them
-        if args.periodFile == None:
-
-            if ptype == "std":
-
-                # Standard period stepping, the array length is
-                # <=ndata*oversample
-                nsamp = ndata * oversample
-
-                if ADJUST_PERIOD_TO_RANGE:
-                    offset = minperiod - 1.0 / ((1.0 + (nsamp - 1)) / nsamp)
-                else:
-                    offset = 0
-
-                for i in range(nsamp):
-                    w = 2.0 * math.pi * ((1.0 + (nsamp - 1 - i)) / nsamp)
-                    p = 2.0 * math.pi / w + offset
-                    if p > maxperiod:
-                        break
-                    elif (p >= minperiod):
-                        period.append(p)
-                        count += 1
-                    elif ADJUST_PERIOD_TO_RANGE:
-                        raise RuntimeError("PeriodStepMethod: Still skipping period " + str(p))
-                nsamp = count
-
-            elif ptype == "exp":
-
-                # Peter's exponential period stepping: the array length
-                # is <=ndata*oversample
-
-                nsamp = ndata * oversample
-
-                pdMagSpan = math.ceil(math.log10(maxperiod / minperiod))
-                if ADJUST_PERIOD_TO_RANGE:
-                    offset = minperiod - (10 ** (-pdMagSpan)) * maxperiod
-                else:
-                    offset = 0
-
-                # this should be done with now: output of version that checked
-                # out without this now saved for future reference
-                if False:
-                    # for comparison with Peter' output
-                    if algo == "bls":
-                        pdMagSpan = 4
-                    elif algo == "ls":
-                        pdMagSpan = 6
-
-                for i in range(nsamp):
-                    p = (10 ** (pdMagSpan * ((1.0 * i / nsamp) - 1))) * maxperiod + offset
-                    if p > maxperiod:
-                        break
-                    elif p >= minperiod:
-                        period.append(p)
-                        count += 1
-                    elif ADJUST_PERIOD_TO_RANGE:
-                        raise RuntimeError("PeriodStepMethod: Still skipping period " + str(p))
-                    if count != len(period):
-                        print("Error: period length!=count!")
-                        print("Period length: " + str(len(period)))
-                        print("Count: " + str(count))
-                        exit()
-
-                nsamp = count
-
-            elif ptype == "fixedf":
-
-                # fixed frequency stepping: this is what the next method
-                # alleges to be...?
-
-                minf = 1.0 / maxperiod
-                maxf = 1.0 / minperiod
-
-                if args.dfreq == DEFAULT_DFREQ:
-                    nsamp = int(ndata * oversample)
-                    df = (maxf - minf) / (nsamp - 1)
-                else:
-                    df = args.dfreq
-                    nsamp = int((maxf - minf) / df) + 1
-
-                args.dfreq = df
-                f = maxf
-
-                for i in range(nsamp):
-                    period.append(1.0 / f)
-                    if (period[i] > (maxperiod + dell)) or \
-                            (period[i] < (minperiod - dell)):
-                        raise RuntimeError("PeriodStepMethod: bad period in fixedf: " + str(period[i]) + " (" + str(
-                            minperiod) + " to " + str(maxperiod) + ")")
-                    f -= df
-
-            elif ptype == "fixedp":
-
-                # fixed period stepping
-
-                if args.dfreq == DEFAULT_DFREQ:
-                    nsamp = int(ndata * oversample)
-                    dp = (maxperiod - minperiod) / (nsamp - 1)
-                else:
-                    dp = args.dfreq
-                    nsamp = int((maxperiod - minperiod) / dp) + 1
-
-                p = minperiod
-                for i in range(nsamp):
-                    period.append(p)
-                    if (period[i] > maxperiod + dell) or \
-                            (period[i] < minperiod - dell):
-                        raise RuntimeError("PeriodStepMethod: bad period in fixedp: " + str(period[i]) + " (" + str(
-                            minperiod) + " to " + str(maxperiod) + ")")
-                    p += dp
-
-            elif ptype == "plav":
-
-                # size of the period step is based on the current period.
-                # Peter says it was suggested by someone on his committee
-                # whose opinion he trusts.
-
-                pstep = args.substep / (maxDay - minDay)
-                p = minperiod
-
-                while p < maxperiod:
-                    period.append(p)
-                    count += 1
-                    p += pstep * p * p
-
-                nsamp = count
-
-            else:
-                raise ValueError("PeriodStepMethod: Invalid period stepping method!")
-            if nsamp == 0:
-                raise ValueError(
-                    "PeriodRangeMin: No periods satisfy min/max period constraints (" + str(minperiod) + "-" + str(
-                        maxperiod) + ") with this PeriodStepMethod!")
-        else:
-            # read periods to process from a file
-            fp = open(args.periodFile, 'r')
-            lines = fp.readlines()
-            fp.close()
-            for l in lines:
-                period.append(float(l.strip()))
-            nsamp = len(period)
-
-        # save the data into the fargs structure
-        this.boxSize = args.smooth
-        this.ndata = ndata
-        this.time = time
-        this.mag = mag
-        this.nsamp = nsamp
-        this.period = period
-        this.power = [0.0] * len(period)
-        # Initialize chi for use in computePlavchan
-        if algo == 'plav':
-            this.chi = [0.0] * this.ndata
-
-        # Initialize other arrays
-        this.phase = [0.0] * this.ndata
-        this.phasedMag = [0.0] * this.ndata
-        this.smoothedMag = [0.0] * this.ndata
-
-        # compute time estimate
-        this.timeEst = estimateProcessingTime(nsamp, ndata, args, args.qmax, algo)
-        if nsamp != len(this.period):
-            raise RuntimeError("Error: nsamp!=len(period)")
-        # print(period)
-
-
-# Class used to hold data from files, column names (labels),
-# filtering info, and various statistics about each set of
-# data. It is organized according to DATA_FIELD_TYPE, an enum
-# that dictates which indicies denote which type of data (xdata,
-# ydata,yUncertainty, etc)
-class dataTbl:
-    def __init__(this):
-        this.description = None  # UNUSED
-        this.origin = None  # UNUSED
-
-        this.ndata = 0  # number of data points
-        this.ndataUnfilt = 0  # number of data points not filtered
-        this.dataArray = []  # each index contains a dataArray of
-        # length ndata corresponding to the
-        # DATA_FIELD_TYPE of that index
-        this.colKeyNames = []  # UNUSED
-        this.arrayNames = []  # contains the column names associated
-        # with the DATA_FIELD_TYPE of that index
-        this.units = []  # UNUSED
-        this.median = []  # the median for each array
-        this.mean = []  # the mean for each array
-        this.sd = []  # the std dev for each array
-        for i in range(DATA_FIELD_TYPE.DATA_N_TYPES):
-            this.colKeyNames.append(None)
-            this.arrayNames.append(None)
-            this.dataArray.append(None)
-            this.units.append(None)
-            this.median.append(UNSET_MEAN)
-            this.mean.append(UNSET_MEAN)
-            this.sd.append(UNSET_MEAN)
-
-        this.omitRow = None  # array containing flags to skip a row.
-        # length:ndata
-        this.tinfo = None  # UNUSED
-        this.nhead = 0  # UNUSED
-        this.header = 0  # UNUSED
-
-    # Function to populate the dataTbl. Calls readDoubleColumns to
-    # get data from file
-    def populate(this, intbl, xcol, ycol, yerrCol, constraintCol, \
-                 constraintMin, constraintMax, delim):
-        # set the column names
-        this.setColName(DATA_FIELD_TYPE.DATA_X, xcol)
-        this.setColName(DATA_FIELD_TYPE.DATA_Y, ycol)
-        this.setColName(DATA_FIELD_TYPE.DATA_CONSTRAINT, constraintCol)
-        this.setColName(DATA_FIELD_TYPE.DATA_Y_UNCERTAINTY, yerrCol)
-
-        # Even though we don't use it, let's set it anyway.
-        this.origin = intbl
-
-        # Index by which we sort data will be the xdata
-        sortIdx = DATA_FIELD_TYPE.DATA_X
-
-        # Read the data, omitting rows that contain non-numerical data
-        unsortedData = readDoubleColumns(intbl, this.arrayNames, delim)
-        # Sort the data
-        this.dataArray = sortColumns(unsortedData, sortIdx)
-        this.ndata = len(this.dataArray[DATA_FIELD_TYPE.DATA_X])
-        if this.ndata <= 0:
-            raise ValueError("InputFile: No data found in file!")
-
-        # Set an initial value for omitRow
-        this.omitRow = [None] * this.ndata
-
-        # print(this.omitRow==None)
-        # Filter bad data
-        this.setFilter(constraintMin, constraintMax)
-
-    # Function to set the arrayNames entry to the specified value
-    def setColName(this, f, s):
-        if f >= DATA_FIELD_TYPE.DATA_N_TYPES:
-            raise ValueError('Inappropriate value:\nf is greater than maximum value!')
-        if s:
-            this.arrayNames[f] = s
-
-    # Function to set omitRow flags based on values in the
-    # constraint (aka filter) column
-    def setFilter(this, minVal, maxVal):
-        # print(this.omitRow==None)
-        # Initially, nothing filtered
-        this.ndataUnfilt = this.ndata
-
-        # check that filtering is applicable here
-        if this.arrayNames[DATA_FIELD_TYPE.DATA_CONSTRAINT] != None and \
-                this.dataArray[DATA_FIELD_TYPE.DATA_CONSTRAINT] != None:
-
-            # have we set lower and upper limits?
-            if minVal == UNSET_VALUE or maxVal == UNSET_VALUE:
-                tmp = this.arrayNames[DATA_FIELD_TYPE.DATA_CONSTRAINT].lower()
-                # status!=0 signifies error - do not allow anything else
-                if "status" in tmp:
-                    minVal = 0
-                    maxVal = 0
-                else:
-                    # identify the minimum and maximum values -- not constrained
-                    # but informational
-                    myArray = this.dataArray[DATA_FIELD_TYPE.DATA_CONSTRAINT]
-                    minVal = min(myArray)
-                    maxVal = max(myArray)
-                    return None  # no restrictions set -> nothing to do
-            # if we get here, we have a constraint field and min and max values
-            nfilt = 0
-            for i in range(this.ndata):
-                # if anything violates the max/min values
-                if not this.omitRow[i] and \
-                        (this.dataArray[DATA_FIELD_TYPE.DATA_CONSTRAINT][i] < minVal or \
-                         this.dataArray[DATA_FIELD_TYPE.DATA_CONSTRAINT][i] > maxVal):
-                    # exclude it
-                    this.omitRow[i] = 1
-                    nfilt += 1
-            if nfilt == this.ndata:
-                raise ValueError("InputFile: all data filtered by constraints!")
-            this.ndataUnfilt = this.ndata - nfilt
-
-
-# This class determines which index for every column of dataArray
-# signifies each type of data
-class DATA_FIELD_TYPE(IntEnum):
-    DATA_X = 0
-    DATA_X_UNCERTAINTY = 1
-    DATA_Y = 2
-    DATA_Y_UNCERTAINTY = 3
-    DATA_CONSTRAINT = 4
-    DATA_N_TYPES = 5
 
 
 #######################
