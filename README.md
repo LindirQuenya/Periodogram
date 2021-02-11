@@ -1,4 +1,4 @@
-#UNSTABLE
+# UNSTABLE
 This code is for developers only. Do not use it for anything you care about, as it can and will fail.
 
 Currently, I'm hoping that this will work if you run `python -m periodogram` and then tack on some options.
