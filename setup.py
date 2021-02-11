@@ -27,8 +27,9 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     include_package_data=True,
     install_requires=install_requires,
+    license='GPLv3',
     url="https://github.com/LindirQuenya/Periodogram",
-    py_modules=['periodogram', '_periodogram'],
+    py_modules=['periodogram','_periodogram'],
     classifiers=[
         "Programming Language :: Python :: 3.5",
         "Operating System :: Unix",
