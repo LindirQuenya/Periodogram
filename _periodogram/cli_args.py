@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# TODO: add comment
+# This file contains a class for parsing and holding command-line arguments.
 
 from _periodogram.constants import *
 from _periodogram.helptext import *
@@ -489,6 +489,9 @@ class pgramArgs:
             print("outdir:" + self.outDir)
         return self.outtbl
 
+    # Function to print the arguments for reproducibility.
+    # Goes a bit overboard with the specificity, but it'll protect
+    # against default value changes.
     def argsPrint(self, main_file_name):
         arr = ['python3', main_file_name]
         if self.algo:

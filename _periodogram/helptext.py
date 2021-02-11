@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-# TODO: add comment
+# This file contains the help texts, printed when the program is run
+# with invalid arguments.
 
 PGRAM_USAGE_TEXT = " Usage: periodogram \n\t[-a <PeriodogramType (algorithm): one of ls, bls, plav>]" \
                    "\n\t[-b <NumberOfBins (-a bls only)>]" \

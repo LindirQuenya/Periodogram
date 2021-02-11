@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-# TODO: make a comment for this
+# This file contains functions that will be used to read and write
+# data on disk.
 
 from _periodogram.constants import *
 

@@ -1,13 +1,7 @@
 #!/usr/bin/env python3
 
-# Python multiprocessing periodogram code
-# Converted from C++ to Python by John Berberian, Jr.
-# Original C++ code by Peter Plavchan
-# This version uses multiprocessing, and is the recommended
-# multiprocessing version.
-# Meant to be run from the terminal with the command:
-# user@computer:~$ python3 driver.py [options] <InputFile>
-# For more information, run this with the option --help.
+# Importing this file will allow full access to
+# all the functions necessary to run the periodogram.
 
 import time
 from _periodogram.algo_ls import *

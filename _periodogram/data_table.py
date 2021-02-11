@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-# TODO: Make a comment for this.
+# This file contains a class for holding the data that the program
+# is run on, along with relevant characteristics.
 
 from _periodogram.statfunc import *
 from _periodogram.utilfunc import *

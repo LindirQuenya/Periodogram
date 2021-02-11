@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
-# TODO: add comment
+# This file runs the overall program. It is meant to be run from the
+# command-line, with the command "python3 -m periodogram ....". However,
+# the module can also be imported and the functions can be used in other
+# Python programs.
 
 from _periodogram.driver import *
 
 
+# This runs the program.
 if __name__ == '__main__':
     # Construct and populate the pgramArgs object
     args = pgramArgs()

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# TODO: add a comment
+# This file contains statistical functions, for computing relevant properties of data.
 
 from _periodogram.preferences import *
 from _periodogram.fileutils import *
@@ -111,6 +111,7 @@ def statTrimOutliers(length, inputarr, threshold, maxfract):
     return length, x1, mean, sd
 
 
+# This function finds the peak periods in the periodogram results.
 def findPeaks(args, fargs):
 
     # Make lists to hold significant periods and their powers

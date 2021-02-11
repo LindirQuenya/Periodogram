@@ -1,22 +1,25 @@
 #!/usr/bin/env python3
-# TODO: make a comment for this
-# TODO: make function comments for everything in this file
+# This file contains a few utilities used throughout the program.
 
+import copy
 from _periodogram.constants import *
 
 
-# assumes rectangular matrix
-def transpose(l):
+# This takes in a matrix, and returns the transpose.
+# Note: assumes rectangular matrix
+def transpose(matrix):
     n = []
-    for i in range(len(l)):
-        for j in range(len(l[0])):
+    for i in range(len(matrix)):
+        for j in range(len(matrix[0])):
             if j == len(n):
-                n.append([l[i][j]])
+                n.append([matrix[i][j]])
             else:
-                n[j].append(l[i][j])
+                n[j].append(matrix[i][j])
     return n
 
 
+# Returns an array of length num, filled with copies
+# of the inlist array.
 def makeArrOfCopies(inlist, num):
     bigArr = [[]] * num
     for k in inlist:
@@ -25,13 +28,26 @@ def makeArrOfCopies(inlist, num):
     return bigArr
 
 
+# Returns a single copy of the input arr.
+# Switched over to deepcopy, because
+# python internals are generally more
+# efficient. Just hoping.
 def makeCopy(arr):
+    return copy.deepcopy(arr)
+
+
+# Returns a single copy of the input arr.
+# Now unused, replaced with copy.deepcopy.
+def makeCopy_OLD(arr):
     newArr = []
     for k in arr:
         newArr.append(k)
     return newArr
 
 
+# Finds the indices to split the period array at
+# for multiprocessing. Hopefully, should lump the
+# fractional bits onto the last array.
 def getSplitNums(nsamp, nproc):
     n = nsamp / nproc
     k = math.floor(n)
@@ -43,14 +59,19 @@ def getSplitNums(nsamp, nproc):
     return startArr, endArr
 
 
-def merge_arrs(firstArr):
+# Turns a 2d array into a 1d array, by appending
+# elements in order.
+def merge_arrs(arr2d):
     newArr = []
-    for l in firstArr:
+    for l in arr2d:
         for e in l:
             newArr.append(e)
     return newArr
 
 
+# Sorts an array's columns according to the values in
+# one of the columns, specified by sortIdx. Each row
+# will stick together, but the row order will change.
 def sortColumns(arr2d, sortIdx):
     # Check that the sortIdx is valid
     if sortIdx >= DATA_FIELD_TYPE.DATA_N_TYPES:
@@ -82,6 +103,7 @@ def sortColumns(arr2d, sortIdx):
 
     # Return the now-sorted array
     return arr2d
+
 
 # New version of mod function, once I remembered
 # that python has a builtin

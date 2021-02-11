@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-# TODO: Make a comment for this.
+# This file contains a class for holding the internal state of
+# the program.
 
 from _periodogram.data_table import *
 from _periodogram.preferences import *
@@ -29,7 +30,7 @@ class funcArgs:
         # start/end index of each peak
         this.width = None
 
-        # BLS results... incase anyone wants to know where the phase
+        # BLS results... in case anyone wants to know where the phase
         # bounds of the transit were
         this.blsS = None
         this.blsR = None
