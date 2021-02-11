@@ -2,6 +2,7 @@
 # TODO: Make a comment for this.
 
 from statfunc import *
+from utilfunc import *
 
 
 # Class used to hold data from files, column names (labels),
@@ -217,7 +218,7 @@ class dataTbl:
 
     # Returns the minimum difference between two adjacent elements
     # in the array for datatype
-    def dtGetMinDiff(self, datatype):
+    def getMinDiff(self, datatype):
         # getArray will run checks
         myArray = self.getArray(datatype)
         minDiff = myArray[1] - myArray[0]
@@ -234,7 +235,7 @@ class dataTbl:
 
     # Returns the median difference between two adjacent elements
     # in the array t.dataArray[f].
-    def dtGetMedianDiff(self, datatype):
+    def getMedianDiff(self, datatype):
         # getArray will run checks
         myArray = self.getArray(datatype)
         diff = []

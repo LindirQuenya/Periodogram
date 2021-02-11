@@ -59,8 +59,8 @@ class funcArgs:
     def populateLite(this, algo, data):
 
         # Retrieve data for processing: number of points, day and mag
-        time = dtGetFilteredArray(data, DATA_FIELD_TYPE.DATA_X)
-        mag = dtGetFilteredArray(data, DATA_FIELD_TYPE.DATA_Y)
+        time = data.getFilteredArray(DATA_FIELD_TYPE.DATA_X)
+        mag = data.getFilteredArray(DATA_FIELD_TYPE.DATA_Y)
         if len(time) != len(mag):
             raise RuntimeError("Houston, we have a problem. len(mag)!=len(time).")
         ndata = len(time)
@@ -84,9 +84,9 @@ class funcArgs:
 
         if adjustByMean or adjustByMinDay:
             if adjustByMean:
-                meanMag = dtGetMean(data, DATA_FIELD_TYPE.DATA_Y)
+                meanMag = data.getMean(DATA_FIELD_TYPE.DATA_Y)
             if adjustByMinDay:
-                minDay = dtGetMin(data, DATA_FIELD_TYPE.DATA_X)
+                minDay = data.getMin(DATA_FIELD_TYPE.DATA_X)
             for i in range(ndata):
                 if adjustByMean:
                     mag[i] -= meanMag
@@ -123,9 +123,9 @@ class funcArgs:
 
         # Get minimum and maximum time values, along with the smallest
         # time-difference between two data points
-        minDay = dtGetMin(data, DATA_FIELD_TYPE.DATA_X)
-        maxDay = dtGetMax(data, DATA_FIELD_TYPE.DATA_X)
-        minDt = dtGetMinDiff(data, DATA_FIELD_TYPE.DATA_X)
+        minDay = data.getMin(DATA_FIELD_TYPE.DATA_X)
+        maxDay = data.getMax(DATA_FIELD_TYPE.DATA_X)
+        minDt = data.getMinDiff(DATA_FIELD_TYPE.DATA_X)
 
         # run a sanity check on the data
         if minDay >= maxDay:
@@ -144,7 +144,7 @@ class funcArgs:
 
         if minperiod == DEFAULT_MINPERIOD:
             # median time step
-            minperiod = dtGetMedianDiff(data, DATA_FIELD_TYPE.DATA_X)
+            minperiod = data.getMedianDiff(DATA_FIELD_TYPE.DATA_X)
 
             if AVG_TIME_STEP:
                 # average time step
@@ -364,3 +364,56 @@ class funcArgs:
 
     def getSortable(self):
         return self.sortable
+
+    # getPeakWidth()
+    # Function to compute and return the start and end+1 indices of each "peak."
+    # width[i][0] is the starting index of the current peak and width[i][1] is
+    # its end index+1 (thus, width[i][0]<=i<width[i][1]).
+    # The start and end indices of a peak are as follows:
+    # For each i, width[i][0]=i
+    # - if power[i] is not above the mean, width[i][1] = i+1.
+    # - if it is above the mean (or above it by "siglevel", currently 0) find
+    #   j such that power[i]...power[j-1] are all above the mean and power[j]
+    #   is below it. Then set width[i][1]=j.
+    # Continue the above loop until i=j
+    def getPeakWidth(self, useLog):
+        sigLevel = 0
+
+        # retrieve power array
+        power = self.getPower()
+        nsamp = len(power)
+
+        if useLog:
+            tmp = []
+            for i in range(nsamp):
+                if not power[i]:
+                    tmp.append(math.log(1.0e-7))
+                else:
+                    tmp.append(math.log(power[i]))
+            power = tmp
+
+        # compute mean and dev for power
+        meanPow = statMean(power, None)
+        sdPow = statStdDev(power, None)
+
+        # make width be a 2d array filled with nonsense
+        # so that we can refer to indecies later on
+        width = [[0.0, 0.0]] * nsamp
+
+        for i in range(nsamp):
+            width[i] = [i, i + 1]
+
+            # If stats failed for this set of powers, make width 1 for all
+            if sdPow > 0:
+                j = i
+                while j < nsamp and (power[j] - meanPow) / sdPow > sigLevel:
+                    j += 1
+                    width[i] = [width[i][0], j]
+
+                # catch up: everything between i and j is the same peak
+                for k in range(i + 1, j):
+                    width[k] = [i, j]
+                if j > i:
+                    i = j - 1
+        self.width = width
+        return width
