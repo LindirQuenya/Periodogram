@@ -13,3 +13,7 @@
 /.idea/*.iml
 /.idea/inspectionProfiles/
 /periodogram.egg-info/
+/build/
+/build/lib/
+/build/lib/_periodogram/
+/build/bdist.linux-x86_64/

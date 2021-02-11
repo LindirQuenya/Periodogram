@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# TODO: add comment
+# This file contains the core functions for the Lomb-Scargle algorithm.
 
 from _periodogram.func_args import *
 from _periodogram.cli_args import *
@@ -59,6 +59,8 @@ def computeLombScargle(data, args, fargs, pool):
     fargs.power = merge_arrs(results)
 
 
+# This function runs a sub-loop of the LS algo.
+# It operates on a small slice of the data, and loops over that.
 def splitLS(time, mag, sdMag, period, startNum, stopNum):
     ret = []
     for i in range(startNum, stopNum):
@@ -66,6 +68,7 @@ def splitLS(time, mag, sdMag, period, startNum, stopNum):
     return ret
 
 
+# This actually runs the LS algorithm on one period.
 def doLS(time, mag, sdMag, p):
     ndata = len(time)
     w = 2 * math.pi / p

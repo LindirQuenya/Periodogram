@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# TODO:add comment
+# This file contains the core functions for the Box Least-Squares algorithm.
 
 from _periodogram.func_args import *
 from _periodogram.cli_args import *
@@ -53,11 +53,6 @@ def computeBLS(data, args, fargs, pool):
     ndata = len(time)
     nsamp = len(period)
 
-    # Initializes variables with nonsense values
-    blsR = [0.0] * nsamp
-    blsS = [0.0] * nsamp
-    lowBin0 = [0] * nsamp
-    lowBin1 = [0] * nsamp
 
     wt, err = [], []
     # In case we want weight as a function of uncertainty
@@ -131,12 +126,10 @@ def computeBLS(data, args, fargs, pool):
     fargs.blsR = results[1]
     fargs.blsS = results[2]
 
-    # Commented out because they are unused
-    # fargs.lowBin0=results[3]
-    # fargs.lowBin1=results[4]
 
-
-# stopNum is exclusive
+# This function runs a sub-loop of the BLS algo.
+# It operates on a small slice of the data, and loops over that.
+# Note: stopNum is exclusive
 def splitBLS(time, mag, wt, period, nbins, binExt, minBins, minWt, totalWt, binMax,
              startNum, stopNum):
     nsamp = len(period)
@@ -148,7 +141,8 @@ def splitBLS(time, mag, wt, period, nbins, binExt, minBins, minWt, totalWt, binM
                          minBins, minWt, totalWt))
     return res
 
-
+# This actually runs the BLS algorithm on one period.
+# Notes:
 # time and mag are arrs. binWt and binMag are working vars,
 # so they can't be shared. copies will have to be made for
 # each run of the function.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# TODO: add comment
+# This file contains the core functions for the Plavchan algorithm.
 
 from _periodogram.func_args import *
 from _periodogram.cli_args import *
@@ -78,7 +78,8 @@ def computePlavchan(data, args, fargs, pool):
     fargs.power = merge_arrs(pool.starmap(splitPlav, myArgList))
 
 
-# A function to split up the tasks
+# This function runs a sub-loop of the Plav algo.
+# It operates on a small slice of the data, and loops over that.
 def splitPlav(time, mag, mySmooth, boxSize, maxStd, noutliers, period,
               startNum, endNum):
     ret = []
@@ -87,7 +88,9 @@ def splitPlav(time, mag, mySmooth, boxSize, maxStd, noutliers, period,
                           noutliers, period[i]))
     return ret
 
-# Actually does the algorithm computation.
+
+# Actually does the algorithm computation. It runs the Plav
+# algorithm on one period.
 def doPlav(time, mag, mySmooth, boxSize, maxStd, noutliers, p):
     ndata = len(time)
     errval = 0
@@ -105,6 +108,7 @@ def doPlav(time, mag, mySmooth, boxSize, maxStd, noutliers, p):
     if maxChi > 0:
         return maxStd / maxChi
     return errval
+
 
 # Function to fold/phase a light curve to an input period.
 # Currently does smoothing based on args->smooth
