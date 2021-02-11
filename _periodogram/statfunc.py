@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # TODO: add a comment
 
-from preferences import *
-from fileutils import *
+from _periodogram.preferences import *
+from _periodogram.fileutils import *
 
 
 # Returns the mean of arr, filtering unusable data points specified by omitRow:

@@ -2,7 +2,7 @@
 # TODO: make a comment for this
 # TODO: make function comments for everything in this file
 
-from constants import *
+from _periodogram.constants import *
 
 
 # assumes rectangular matrix

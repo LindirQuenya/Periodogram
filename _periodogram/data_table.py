@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # TODO: Make a comment for this.
 
-from statfunc import *
-from utilfunc import *
+from _periodogram.statfunc import *
+from _periodogram.utilfunc import *
 
 
 # Class used to hold data from files, column names (labels),

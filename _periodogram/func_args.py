@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # TODO: Make a comment for this.
 
-from data_table import *
-from preferences import *
+from _periodogram.data_table import *
+from _periodogram.preferences import *
 
 
 # Class to hold the arguments that will be passed in

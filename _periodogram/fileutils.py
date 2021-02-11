@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # TODO: make a comment for this
 
-from constants import *
+from _periodogram.constants import *
 
 
 # Function to read the data from a file, and construct dataArray from it,

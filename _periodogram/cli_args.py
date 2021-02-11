@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 # TODO: add comment
 
-from constants import *
-from helptext import *
+from _periodogram.constants import *
+from _periodogram.helptext import *
 from getopt import getopt
 import os
 import sys
-
 
 
 # Class to hold command line arguments

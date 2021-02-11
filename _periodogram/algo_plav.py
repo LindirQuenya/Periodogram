@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # TODO: add comment
 
-from func_args import *
-from cli_args import *
+from _periodogram.func_args import *
+from _periodogram.cli_args import *
 
 
 # computePlavchan()
