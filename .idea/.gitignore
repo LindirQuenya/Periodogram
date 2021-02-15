@@ -1,0 +1,23 @@
+# Default ignored files
+/shelf/
+/workspace.xml
+# Datasource local storage ignored files
+/dataSources/
+/dataSources.local.xml
+# Editor-based HTTP Client requests
+/httpRequests/
+/__pycache__/
+/_periodogram/__pycache__/
+/venv/
+/.idea/*.xml
+/.idea/*.iml
+/.idea/inspectionProfiles/
+/periodogram.egg-info/
+/build/
+/build/lib/
+/build/lib/_periodogram/
+/build/bdist.linux-x86_64/
+/_periodogram/*.pyc
+*.pyc
+/tests/__pycache__
+/dist/
