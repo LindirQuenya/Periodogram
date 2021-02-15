@@ -181,11 +181,11 @@ class dataTbl:
     # Calculates and returns the stddev if it's unset.
     def getDev(self, datatype):
         try:
-            if self.isMeanSet(datatype) < 1:
+            if self.isDevSet(datatype) < 1:
                 myArray = self.getArray(datatype)
                 d = statStdDev(myArray, self.omitRow)
                 self.setDev(datatype, d)
-            return self.mean[datatype]
+            return self.sd[datatype]
         except IndexError:
             raise ValueError('Inappropriate value:\ndatatype is greater than maximum value!')
 

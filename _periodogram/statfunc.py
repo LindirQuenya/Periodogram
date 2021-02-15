@@ -135,8 +135,14 @@ def findPeaks(args, fargs):
     power = fargs.getPower()
     nsamp = len(period)
 
+#    for i in range(nsamp):
+#        print("[{per:.6f}, {pow:.6f}]".format(per=period[i], pow=power[i]))
+
     # determine the width of each peak
     width = fargs.getPeakWidth((isPlav or (USE_LOGNORMAL_BLS and isBls)))
+
+#    for w in width:
+#        print(w)
 
     # skipme will be used to identify periods that are part of previously
     # identified peaks
@@ -163,16 +169,20 @@ def findPeaks(args, fargs):
                 p = math.log(TINY_NUM)
             else:
                 p = math.log(power[i])
-        #        print(p)
-        #        print(i)
+#        print(i)
+#        print(p)
+#        print()
         sortable[i] = [p, i]
     #    print(sortable)
     sortable.sort()
     #    print(sortable)
     for i in range(nsamp):
         sortedPower[i] = sortable[i][0]
+#        print(sortedPower[i])
     statNsamp, meanPwr, sdPwr = computePgramStats(args, nsamp, sortedPower, width)
-
+#    print(statNsamp)
+#    print(meanPwr)
+#    print(sdPwr)
     # bls-specific stuff
     H, L = 0.0, 0.0
 
@@ -181,6 +191,10 @@ def findPeaks(args, fargs):
     sig = 0
     j = 0
     nph = 0
+
+#    for k in skipme:
+#        if k:
+#            print(k)
     # print(sortable)
     while nph < args.nphased and sig <= args.sigThresh and j < nsamp:
         myIdxJ = int(sortable[nsamp - j - 1][1])
@@ -219,18 +233,21 @@ def findPeaks(args, fargs):
         if sig <= args.sigThresh:
             if skipme[myIdxJ]:
                 pass
-                # print("SKIPPING "+str(period[myIdxJ]))
+#                print("SKIPPING "+str(period[myIdxJ]))
             if not skipme[myIdxJ]:
-                # print(str(period[myIdxJ])+" made it in!")
+#                print(str(period[myIdxJ])+" made it in!")
                 # block out the other points associated with this peak
                 for k in range(width[myIdxJ][0], width[myIdxJ][1]):
                     skipme[k] = 1
+#                print(width[myIdxJ][0])
+#                print(width[myIdxJ][1])
                 if 0 not in skipme:
                     pass
-                    # print("All periods skipped!")
+#                    print("All periods skipped!")
                 sigPeriod.append(period[myIdxJ])
                 sigPower.append(power[myIdxJ])
-            nph += 1
+#                print(str(period[myIdxJ])+"\t"+str(power[myIdxJ]))
+                nph += 1
         else:
             args.nphased = nph
             # print("Stopping with nphased="+str(nph))
@@ -263,9 +280,9 @@ def computePgramStats(args, nsamp, sortedPower, peakWidth):
     numP = nsamp
 
     # Make return variables
-    statNsamp = None
-    meanPwr = None
-    sdPwr = None
+    statNsamp = 0
+    meanPwr = 0.0
+    sdPwr = 0.0
 
     # if we have the input values for number of samples, mean and dev
     # save them in the local variables
@@ -283,11 +300,13 @@ def computePgramStats(args, nsamp, sortedPower, peakWidth):
     if args.powN != DEFAULT_POW_NUM and \
             args.powMean != DEFAULT_POW_MEAN and \
             args.powSd != DEFAULT_POW_SD:
+#        print("HELLO WORLD")
         return statNsamp, meanPwr, sdPwr
 
     # If this is lomb-scargle, we don't want to comput stats
     # and we set statNsamp above so just return
     if args.algo == "ls":
+#        print("HELLO WORLDs")
         return statNsamp, meanPwr, sdPwr
 
     # otherwise, compute stats
@@ -315,6 +334,7 @@ def computePgramStats(args, nsamp, sortedPower, peakWidth):
         else:
             sd = DEFAULT_POW_SD
         myP = trimmedP
+#        print(myP)
     else:
         for i in range(numP):
             p = myP[i]
@@ -331,6 +351,7 @@ def computePgramStats(args, nsamp, sortedPower, peakWidth):
             sd = math.sqrt(diff / (numP - 1))
         else:
             sd = DEFAULT_POW_SD
+#        print(sd)
         if TRIM_OUTLIERS:
             # Trim outliers and re-compute mean and deviation
             # trimming gaussian outliers is not appropriate for the ls algo

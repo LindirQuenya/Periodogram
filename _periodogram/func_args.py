@@ -383,7 +383,7 @@ class funcArgs:
         # retrieve power array
         power = self.getPower()
         nsamp = len(power)
-
+#        print(useLog)
         if useLog:
             tmp = []
             for i in range(nsamp):
@@ -397,11 +397,20 @@ class funcArgs:
         meanPow = statMean(power, None)
         sdPow = statStdDev(power, None)
 
+#        for i in range(nsamp):
+#            print("{pval:.6f}".format(pval=power[i]))
+#        print(meanPow)
+#        print(sdPow)
+
         # make width be a 2d array filled with nonsense
         # so that we can refer to indecies later on
         width = [[0.0, 0.0]] * nsamp
 
-        for i in range(nsamp):
+        # Basically, a DIY for-loop.
+        # Equivalent (ish) to
+        # for (int i = 0; i < nsamp; i++)
+        i = 0
+        while i < nsamp:
             width[i] = [i, i + 1]
 
             # If stats failed for this set of powers, make width 1 for all
@@ -414,7 +423,15 @@ class funcArgs:
                 # catch up: everything between i and j is the same peak
                 for k in range(i + 1, j):
                     width[k] = [i, j]
+
+                # It has to be a while loop, otherwise this wouldn't work.
+                # Python would continue to the next value in the range(),
+                # instead of just incrementing the current value.
                 if j > i:
                     i = j - 1
+            # The for-loop's i++
+            i += 1
+#        for i in range(nsamp):
+#            print(str(width[i][0])+"\t"+str(width[i][1]))
         self.width = width
         return width

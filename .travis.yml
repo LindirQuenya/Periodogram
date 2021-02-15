@@ -1,0 +1,16 @@
+language: python
+python:
+  - '3.9'
+install:
+  - pip install -r requirements.txt
+  - python -m pip install --upgrade build
+  - pip install pytest
+  - python -m build
+  - pip install $TRAVIS_BUILD_DIR/dist/*.whl
+script: pytest
+deploy:
+  provider: pypi
+  username: "__token__"
+  password:
+    secure: dm6Jp1twdYWeyHDKRh/xCg3CZ419/AV2+cVKvpIztiPetH/D1fiddTHOu92a+hVCQN49p1Y3tNsbIEgYh3pitVUgI/VMM1XFa3xyG+L961SwzV82hIdomz9o6nWNjW755pX1aDSQs0mRf8c4htfgilG7FeCjhGP5wIOaDHaKd9vkOtCDzvzY9MGdSgHXyZgPny0oZHdabvxeV8zFXPaH8d4527vsGqk0i272/l+jWHa5W11/GU9/ATFks3WEmceXhpO44SNgyw2CXkuldQ2x9VqCtvSgLxdWTh2L5Rj4Hvisp3PHC03TFRC42u/aLMzhSxzY6CcZ4+VO/FsDmXLsxbnNibmA6mbhGTslbQXnqlA0b9KKxMuhnu5DKFTWVjQJ1I7q1eQlAi1GVZbQR8qqlkzFtD66MzxgMNHmR7yWKj6jrMOgjKdnSR8Dn1/vun5PlWaXySV/FrRwzm/A023EH1zN1K+v5qpY1+8+JfPiIWbcK+/y9xs4dGUDlUAQpMV0PzaNHNDU+J3/glCe0DKTVAbAUsceezaidTOIAckdZXcU9j+XhGbl2/9yoOQvpubQwo9xmgEu8BdGPS010aPKMrNuKMeTsf5Cet78H/iq9BYChyfFFZMRdKJ5fTA++SFH/4Q0PtZPHcknPNBIETOvdYAMC1U2+tLzAAr2vCKUDdc=
+  server: https://test.pypi.org

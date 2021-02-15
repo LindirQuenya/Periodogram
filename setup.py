@@ -18,7 +18,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="periodogram",
-    version="0.1.0",
+    version="0.1.1",
     author="John Berberian, Jr.",
     author_email="jeb.study@gmail.com",
     description="Compute periodograms of formatted data.",

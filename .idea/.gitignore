@@ -17,3 +17,7 @@
 /build/lib/
 /build/lib/_periodogram/
 /build/bdist.linux-x86_64/
+/_periodogram/*.pyc
+*.pyc
+/tests/__pycache__
+/dist/
