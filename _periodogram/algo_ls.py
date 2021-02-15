@@ -48,6 +48,7 @@ def computeLombScargle(data, args, fargs, pool):
 
     # Compute stats on magnitude
     sdMag = data.getDev(DATA_FIELD_TYPE.DATA_Y)
+#    print(sdMag)
     if sdMag == 0:
         raise ValueError("Error in InputFile: Zero deviation in data values!")
     myArgList = []
@@ -56,6 +57,7 @@ def computeLombScargle(data, args, fargs, pool):
         myArgList.append([time, mag, sdMag, period, startArr[i], endArr[i]])
     results = pool.starmap(splitLS, myArgList)
     #    results=pool.starmap(doLS,transpose([[time]*nsamp,[mag]*nsamp,[sdMag]*nsamp,period]))
+#    print(results)
     fargs.power = merge_arrs(results)
 
 
@@ -65,6 +67,7 @@ def splitLS(time, mag, sdMag, period, startNum, stopNum):
     ret = []
     for i in range(startNum, stopNum):
         ret.append(doLS(time, mag, sdMag, period[i]))
+#    print(ret)
     return ret
 
 
@@ -89,5 +92,6 @@ def doLS(time, mag, sdMag, p):
         lnum += mag[j] * c
         rdenom += s * s
         ldenom += c * c
+#    print((1 / (2 * sdMag * sdMag)) * ((lnum * lnum) / ldenom + (rnum * rnum / rdenom)))
     return (1 / (2 * sdMag * sdMag)) * ((lnum * lnum) / ldenom + (rnum * rnum / rdenom))
 
