@@ -78,7 +78,7 @@ def computeBLS(data, args, fargs, pool):
     nbins = args.nbins
 
     # Write nbins value to debugfp
-    if args.debugfp != None:
+    if args.debugfp is not None:
         args.debugfp.write("IN COMPUTE BLS: nbins = " + str(nbins) + "\n")
 
     # Run checks on FractionOfPeriodInTransitMin/Max before
@@ -115,12 +115,12 @@ def computeBLS(data, args, fargs, pool):
 
     # Compute periodogram
     results = pool.starmap(splitBLS, myArgList)
-    ##    results=pool.starmap(doBLS,transpose([[time]*nsamp,[mag]*nsamp,[wt]*nsamp,\
-    ##                                      makeArrOfCopies(binWt,nsamp),\
-    ##                                      makeArrOfCopies(binMag,nsamp),\
-    ##                                      period,[nbins]*nsamp,[nsamp]*nsamp,\
-    ##                                          [binExt]*nsamp,[minBins]*nsamp,\
-    ##                                          [minWt]*nsamp,[totalWt]*nsamp]))
+    #    results=pool.starmap(doBLS,transpose([[time]*nsamp,[mag]*nsamp,[wt]*nsamp,\
+    #                                      makeArrOfCopies(binWt,nsamp),\
+    #                                      makeArrOfCopies(binMag,nsamp),\
+    #                                      period,[nbins]*nsamp,[nsamp]*nsamp,\
+    #                                          [binExt]*nsamp,[minBins]*nsamp,\
+    #                                          [minWt]*nsamp,[totalWt]*nsamp]))
     results = transpose(merge_arrs(results))
     fargs.power = results[0]
     fargs.blsR = results[1]

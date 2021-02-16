@@ -94,4 +94,3 @@ def doLS(time, mag, sdMag, p):
         ldenom += c * c
 #    print((1 / (2 * sdMag * sdMag)) * ((lnum * lnum) / ldenom + (rnum * rnum / rdenom)))
     return (1 / (2 * sdMag * sdMag)) * ((lnum * lnum) / ldenom + (rnum * rnum / rdenom))
-

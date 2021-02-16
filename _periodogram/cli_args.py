@@ -10,98 +10,98 @@ import sys
 
 # Class to hold command line arguments
 class pgramArgs:
-    def __init__(this):
-        this.debugfile = None
-        this.debugfp = None
+    def __init__(self):
+        self.debugfile = None
+        self.debugfp = None
 
-        # this.numProc=0 #number of processors to split job across
-        # this.server=None #remote server on which to launch split jobs
-        # this.port=0 #remote port
+        # self.numProc=0 #number of processors to split job across
+        # self.server=None #remote server on which to launch split jobs
+        # self.port=0 #remote port
 
-        # this.serverconfig=None #file containing information about servers and
+        # self.serverconfig=None #file containing information about servers and
         # number of processors, etc.
-        # this.title=None #title for display on plots, UNUSED
+        # self.title=None #title for display on plots, UNUSED
 
         # input filename
-        this.intbl = None
+        self.intbl = None
         # output filename
-        this.outtbl = None
+        self.outtbl = None
 
-        this.hdu = DEFAULT_HDU  # if the input file is a fits file, specify the hdu
+        self.hdu = DEFAULT_HDU  # if the input file is a fits file, specify the hdu
         # UNUSED
 
         # output directives
-        this.inBase = None
-        this.outBase = None
-        this.outToStdOut = 0  # allow output to standard out
-        this.outDir = None  # output files to this directory
+        self.inBase = None
+        self.outBase = None
+        self.outToStdOut = 0  # allow output to standard out
+        self.outDir = None  # output files to this directory
 
         # input directory
-        this.datahome = None
+        self.datahome = None
 
-        this.localFile = 0  # UNUSED, but keeping it just so old commands won't
+        self.localFile = 0  # UNUSED, but keeping it just so old commands won't
         # throw errors
-        this.loadPrecomputed = 0  # UNUSED, same as above
+        self.loadPrecomputed = 0  # UNUSED, same as above
 
-        this.periodFile = None  # UNUSED
+        self.periodFile = None  # UNUSED
 
         # column names, so we know which data means what
-        this.xcol = None  # name of x (time) column in data file
-        this.ycol = None  # name of y (data) column in data file
-        this.yerrCol = None  # name of uncertainty column (y error) in data file
-        this.constraintCol = None  # name of column in data file indicating
+        self.xcol = None  # name of x (time) column in data file
+        self.ycol = None  # name of y (data) column in data file
+        self.yerrCol = None  # name of uncertainty column (y error) in data file
+        self.constraintCol = None  # name of column in data file indicating
         # which measurements to exclude (dictated
         # by constraintMin and constraintMax)
 
         # exclude all rows that have constraint values that are not
         # between (inclusive) these two
-        this.constraintMin = DEFAULT_CONSTRAINT
-        this.constraintMax = DEFAULT_CONSTRAINT
+        self.constraintMin = DEFAULT_CONSTRAINT
+        self.constraintMax = DEFAULT_CONSTRAINT
 
-        this.minperiod = DEFAULT_MAXPERIOD
-        this.maxperiod = DEFAULT_MINPERIOD
-        this.asFreq = 0  # For error messages, mostly, to check whether
+        self.minperiod = DEFAULT_MAXPERIOD
+        self.maxperiod = DEFAULT_MINPERIOD
+        self.asFreq = 0  # For error messages, mostly, to check whether
         # period info was given in frequency or period
 
         # delimiter separating values in inputfile and outputfile
-        this.inputDelimiter = DEFAULT_DELIMITER
+        self.inputDelimiter = DEFAULT_DELIMITER
 
         # type of period stepping: std,exp,fixedf,fixedp,plav
-        this.pstepType = DEFAULT_PSTEP
-        this.oversample = DEFAULT_OVERSAMPLE
-        this.substep = DEFAULT_SUBSTEP
-        this.dfreq = DEFAULT_DFREQ
+        self.pstepType = DEFAULT_PSTEP
+        self.oversample = DEFAULT_OVERSAMPLE
+        self.substep = DEFAULT_SUBSTEP
+        self.dfreq = DEFAULT_DFREQ
 
         # one of "bls", "plav", or "ls"
-        this.algo = DEFAULT_ALGO
+        self.algo = DEFAULT_ALGO
 
         # variables for use with BLS algo
-        this.nbins = DEFAULT_NBINS
-        this.qmin = DEFAULT_QMIN
-        this.qmax = DEFAULT_QMAX
+        self.nbins = DEFAULT_NBINS
+        self.qmin = DEFAULT_QMIN
+        self.qmax = DEFAULT_QMAX
 
         # variables for use with Plavchan algo
-        this.nout = DEFAULT_NOUT
+        self.nout = DEFAULT_NOUT
 
         # smoothing box size for plav. algo or output of smoothed curves
-        this.smooth = DEFAULT_SMOOTH
+        self.smooth = DEFAULT_SMOOTH
 
         # number of phased light curves to return
-        this.nphased = DEFAULT_NPHASED
+        self.nphased = DEFAULT_NPHASED
 
         # significance threshold for light curve?
-        this.sigThresh = DEFAULT_SIG_THRESH
+        self.sigThresh = DEFAULT_SIG_THRESH
 
         # statistical quantities to return (and maybe input?)
-        this.powN = DEFAULT_POW_NUM
-        this.powMean = DEFAULT_POW_MEAN
-        this.powSd = DEFAULT_POW_SD
+        self.powN = DEFAULT_POW_NUM
+        self.powMean = DEFAULT_POW_MEAN
+        self.powSd = DEFAULT_POW_SD
 
         # Flag to label output files
-        this.outLabeled = False
+        self.outLabeled = False
 
         # Number of workers in pool
-        this.nproc = DEFAULT_NPROC
+        self.nproc = DEFAULT_NPROC
 
     # Function to parse arguments passed to the "periodogram"
     # command at the command line
@@ -301,7 +301,7 @@ class pgramArgs:
                 pass
             elif a[0] == '-T':
                 # set the title, but replace ' ' with '_'
-                # this.title=a[1].replace(' ','_')
+                # self.title=a[1].replace(' ','_')
                 pass
             elif a[0] == '-u':
                 if float(a[1]) <= 0:
@@ -417,21 +417,21 @@ class pgramArgs:
             if s[0] == '-':
                 raise ValueError("Misplaced argument " + s + ": switches must precede arguments!")
             elif s[0] == '.' and (len(s) == 1 or (s[1] == '.' and len(s) == 2)):
-                if self.intbl == None:
+                if self.intbl is None:
                     raise ValueError("InputFile: " + s + " is not a valid value.")
                 else:
                     raise ValueError("OutputFile: " + s + " is not a valid value.")
             else:
-                if self.intbl == None:
+                if self.intbl is None:
                     self.intbl = s
-                elif self.outtbl == None:
+                elif self.outtbl is None:
                     self.outtbl = s
                 else:
                     raise ValueError("Argument " + s + " not recognized.")
-        if self.intbl == None:
+        if self.intbl is None:
             raise ValueError("InputFile: must supply an input file!")
         if self.intbl[0] != '/':
-            if self.datahome != None:
+            if self.datahome is not None:
                 if self.datahome[len(self.datahome) - 1] == '/':
                     self.datahome = self.datahome[:len(self.datahome) - 1]
                 self.intbl = self.datahome + '/' + self.intbl
@@ -445,7 +445,7 @@ class pgramArgs:
 
     # Function to get the pathless input filename
     def getInBase(self):
-        if self.inBase == None:
+        if self.inBase is None:
             tmp = self.intbl.split("/")
             tmp = tmp[len(tmp) - 1]
             self.inBase = tmp
@@ -454,8 +454,8 @@ class pgramArgs:
     # Function to get the pathless output filename, creates
     # one if it is not yet set
     def getOutBase(self):
-        if self.outBase == None:
-            if self.outtbl == None:
+        if self.outBase is None:
+            if self.outtbl is None:
                 self.outBase = self.getInBase() + ".out"
             else:
                 tmp = self.outtbl.split("/")
@@ -467,7 +467,7 @@ class pgramArgs:
     # sets it if it is unset
     def getOutputFile(self):
         path = os.getcwd()
-        if self.outDir != None:
+        if self.outDir is not None:
             if self.outDir[0] != '/':
                 path = os.getcwd() + '/' + self.outDir
                 self.outDir = path
@@ -475,7 +475,7 @@ class pgramArgs:
                 path = self.outDir
         if path[len(path) - 1] == '/':
             path = path[:len(path) - 1]
-        if self.outtbl == None:
+        if self.outtbl is None:
             tmpFname = path + '/' + self.getOutBase()
             if not tmpFname:
                 raise RuntimeError("Error. Outtbl filename empty!")
@@ -484,7 +484,7 @@ class pgramArgs:
             if self.outtbl[0] != '/':
                 tmpFname = path + '/' + self.outtbl
                 self.outtbl = tmpFname
-        if self.outtbl == None:
+        if self.outtbl is None:
             print("path:" + path)
             print("outdir:" + self.outDir)
         return self.outtbl
@@ -515,9 +515,9 @@ class pgramArgs:
         if self.minperiod != DEFAULT_MINPERIOD and self.asFreq:
             arr.append('-F')
             arr.append(str(1.0 / self.minperiod))
-        ##        if this.datahome:
-        ##            arr.append('-h')
-        ##            arr.append(str(this.datahome))
+        #        if self.datahome:
+        #            arr.append('-h')
+        #            arr.append(str(self.datahome))
         if self.pstepType:
             arr.append('-i')
             arr.append(str(self.pstepType))
@@ -552,18 +552,18 @@ class pgramArgs:
             arr.append('-Q')
             arr.append(str(self.qmax))
         # removed because outDir is included in outtbl
-        #        if this.outDir:
+        #        if self.outDir:
         #            arr.append('-R')
-        #            arr.append(str(this.outDir))
+        #            arr.append(str(self.outDir))
         if self.smooth:
             arr.append('-s')
             arr.append(str(self.smooth))
         if self.sigThresh:
             arr.append('-S')
             arr.append(str(self.sigThresh))
-        #        if this.title:
+        #        if self.title:
         #            arr.append('-T')
-        #            arr.append(str(this.title))
+        #            arr.append(str(self.title))
         if self.substep and self.pstepType == "plav":
             arr.append('-u')
             arr.append(str(self.substep))

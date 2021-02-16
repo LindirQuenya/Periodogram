@@ -10,54 +10,54 @@ from _periodogram.preferences import *
 # and out of a periodogram function call. Will also be
 # used to store utility arrays
 class funcArgs:
-    def __init__(this):
+    def __init__(self):
         # populated by populateLite() before calling
         # specific algorithms
-        this.ndata = 0
-        this.time = None
-        this.mag = None
+        self.ndata = 0
+        self.time = None
+        self.mag = None
 
         # these arguments are set based on pstepType and
         # associated command-line arguments
-        this.nsamp = 0
-        this.period = None
+        self.nsamp = 0
+        self.period = None
 
-        this.timeEst = -1
+        self.timeEst = -1
 
         # populated by the specific algorithm
-        this.power = None
+        self.power = None
 
         # start/end index of each peak
-        this.width = None
+        self.width = None
 
         # BLS results... in case anyone wants to know where the phase
         # bounds of the transit were
-        this.blsS = None
-        this.blsR = None
-        this.lowBin0 = None
-        this.lowBin1 = None
+        self.blsS = None
+        self.blsR = None
+        self.lowBin0 = None
+        self.lowBin1 = None
 
         # From input arguments
-        this.boxSize = None
+        self.boxSize = None
 
         # reusable arrays, recomputed during
         # each call to phaseLightCurve based
         # on the value of p
-        this.p = 0
+        self.p = 0
 
         # the following are sorted by phase
-        this.phase = None
-        this.phasedMag = None
-        this.smoothedMag = None
-        this.chi = None  # for use by plav
+        self.phase = None
+        self.phasedMag = None
+        self.smoothedMag = None
+        self.chi = None  # for use by plav
 
         # sortable will hold the original order of the last array sorted
-        this.sortable = None
+        self.sortable = None
 
     # populateLite()
     # Function to import time and mag (possibly adjusted by minDay and
     # meanMag) into the funcArgs object. This will be called by populate()
-    def populateLite(this, algo, data):
+    def populateLite(self, algo, data):
 
         # Retrieve data for processing: number of points, day and mag
         time = data.getFilteredArray(DATA_FIELD_TYPE.DATA_X)
@@ -94,9 +94,9 @@ class funcArgs:
                 if adjustByMinDay:
                     time[i] -= minDay
 
-        this.ndata = ndata
-        this.time = time
-        this.mag = mag
+        self.ndata = ndata
+        self.time = time
+        self.mag = mag
 
     # populate()
 

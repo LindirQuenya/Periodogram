@@ -70,7 +70,7 @@ class dataTbl:
         # Set an initial value for omitRow
         self.omitRow = [None] * self.ndata
 
-        # print(this.omitRow==None)
+        # print(self.omitRow==None)
         # Filter bad data
         self.setFilter(constraintmin, constraintmax)
 
@@ -84,7 +84,7 @@ class dataTbl:
     # Function to set omitRow flags based on values in the
     # constraint (aka filter) column
     def setFilter(self, minval, maxval):
-        # print(this.omitRow==None)
+        # print(self.omitRow==None)
         # Initially, nothing filtered
         self.ndataUnfilt = self.ndata
 

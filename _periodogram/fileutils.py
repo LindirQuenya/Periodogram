@@ -54,7 +54,7 @@ def readDoubleColumns(fname, arrayNames, delim):
                 ind = DATA_FIELD_TYPE(arrayNames.index(label))
                 # change that index map element
                 indMap[i] = ind
-            except:
+            except ValueError:
                 # Evidently that label is not one that we care about
                 pass
 
@@ -74,9 +74,12 @@ def readDoubleColumns(fname, arrayNames, delim):
                     fl = float(row[i])
                     # Add it on to columns at the proper index
                     columns[indMap[i]] = columns[indMap[i]] + [fl]
-                except:
+                except ValueError:
                     # It must be non-numerical. Let's pretend that row
                     # never existed.
+                    pass
+                except TypeError:
+                    # Alternatively, it might have been impossible to cast.
                     pass
     # It's possible that some types of data just weren't in the file,
     # so change all of the columns that are still empty to be filled
@@ -85,6 +88,7 @@ def readDoubleColumns(fname, arrayNames, delim):
 
     # Finally, return our value
     return columns
+
 
 # Basic algo to save period/power columns, unlabeled
 def saveOutput(outstream, period, power, delim):
