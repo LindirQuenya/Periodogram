@@ -1,11 +1,21 @@
 #!/usr/bin/env python3
 # This file contains a class for parsing and holding command-line arguments.
+import argparse
 
 from _periodogram.constants import *
 from _periodogram.helptext import *
 from getopt import getopt
 import os
 import sys
+
+
+# TODO: move these somewhere else
+def oneOverFloat(val):
+    return 1 / float(val)
+
+
+def boolInt(val):
+    return bool(int(val))
 
 
 # Class to hold command line arguments
@@ -123,9 +133,9 @@ class pgramArgs:
             print(PGRAM_HELP_TEXT)
             exit()
         # still available: ABCEgGIJjklmOrtUvzZ
-        optList, args = getopt(sys.argv[1:], "a:b:c:d:D:e:f:F:h:H:i:K:LM:n:N:o:p:P:q:Q:R:s:S:T:u:V:w:W:x:X:y:Y:")
+        optList, args = getopt(sys.argv[1:], "a:b:c:d:D:e:f:F:H:i:K:LM:n:N:o:p:P:q:Q:R:s:S:T:u:V:w:W:x:X:y:Y:")
         for a in optList:
-            if a[0] == '-a':
+            if a[0] == '-a': # Done
                 # check for invalid algo
                 if a[1] not in ['ls', 'bls', 'plav']:
                     raise ValueError(
@@ -190,15 +200,15 @@ class pgramArgs:
                 # set minperiod and asFreq
                 self.minperiod = 1.0 / float(a[1])
                 self.asFreq = 1
-            elif a[0] == '-h':
+            elif a[0] == '-H':  # Capitalized to prevent conflicting with help option.
                 # set datahome
                 self.datahome = a[1]
-            elif a[0] == '-H':
-                # Unused
-                self.hdu = int(a[1])
-                if self.hdu != DEFAULT_HDU and \
-                        self.hdu <= 0:
-                    raise ValueError("Inappropriate value for option -H:" + a[1] + "\nargument must begreater than 0!")
+            #            elif a[0] == '-H':
+            #                # Unused
+            #                self.hdu = int(a[1])
+            #                if self.hdu != DEFAULT_HDU and \
+            #                        self.hdu <= 0:
+            #                    raise ValueError("Inappropriate value for option -H:" + a[1] + "\nargument must be greater than 0!")
             elif a[0] == '-i':
                 # check for pstepType validity
                 if a[1] not in ["exp", "std", 'plav', 'fixedf', 'fixedp']:
@@ -240,8 +250,8 @@ class pgramArgs:
                 # set number of curves to output
                 self.nphased = int(a[1])
             elif a[0] == '-o':
-                if int(a[1]) <= 0:
-                    raise ValueError("Inappropriate value for option -o:" + a[1] + "\nargument must be greater than 0!")
+                if int(a[1]) <= 1:
+                    raise ValueError("Inappropriate value for option -o:" + a[1] + "\nargument must be greater than 1!")
                 # set the oversample factor
                 self.oversample = int(a[1])
             elif a[0] == '-O':
@@ -442,6 +452,178 @@ class pgramArgs:
             raise ValueError("InputFile: '" + self.intbl + "' does not contain a file name!")
         self.getOutputFile()
         self.getOutBase()
+
+    def populate_new(self, argv):
+        nbSet = False
+
+        parser = argparse.ArgumentParser(description='Compute a periodogram, and compute a period-power table.',
+                                         prog='python3 -m periodogram', epilog=EPILOG_TEXT, usage=PGRAM_USAGE_TEXT,
+                                         formatter_class=argparse.RawTextHelpFormatter)
+        parser.add_argument('-a', nargs=1, default=DEFAULT_ALGO, type=str, choices=['ls', 'bls', 'plav'], dest='algo',
+                            help='Specifies which Periodogram algorithm to run. One of ls, bls, plav.',
+                            metavar='PeriodogramType')
+        parser.add_argument('-b', nargs=1, type=int, dest='nbins', metavar='NumberOfBins',
+                            help='Specifies the number of bins to use in the bls algorithm (only with -a bls).',
+                            max=2000, min=5)
+        parser.add_argument('-c', nargs=1, default=DEFAULT_NPROC, type=int, dest='nproc', metavar='NumWorkers',
+                            help='Specifies how many workers to use in the multiprocessing Pool. Defaults to the '
+                                 '\nnumber of cores on the computer.')
+        parser.add_argument('-d', nargs=1, default=DEFAULT_DFREQ, type=float, dest='dfreq', metavar='FixedStepSize',
+                            help="Specifies the size of the fixed frequency step or period step, depending on which "
+                                 "\nof fixedf or fixedp was chosen for -i. (Only with -i fixedp or -i fixedf)")
+        parser.add_argument('-e', nargs=1, default=DEFAULT_DELIMITER, type=str, dest='inputDelimiter',
+                            help="Delimiter separating data and (optionally) column labels in the InputFile. If not "
+                                 "\nsupplied, ',' will be used. This will also be used to separate the output data in "
+                                 "\nthe OutputFile. For information on how to use escape characters from the command "
+                                 "\nline (e.g. \\t), see \nhttp://www.gnu.org/software/bash/manual/html_node/ANSI_002dC"
+                                 "-Quoting.html", metavar='DataDelimiter')
+        maxPGroup = parser.add_mutually_exclusive_group()
+        maxPGroup.add_argument('-f', nargs=1, default=DEFAULT_MAXPERIOD, type=oneOverFloat, metavar='FrequencyRangeMin',
+                               dest='maxperiod', help='The minimum frequency to consider in period selection.')
+        maxPGroup.add_argument('-P', nargs=1, default=DEFAULT_MAXPERIOD, type=float, metavar='PeriodRangeMax',
+                               dest='maxperiod', help='The maximum period to consider in period selection.')
+        minPGroup = parser.add_mutually_exclusive_group()
+        minPGroup.add_argument('-F', nargs=1, default=DEFAULT_MINPERIOD, type=oneOverFloat, metavar='FrequencyRangeMax',
+                               dest='minperiod', help='The maximum frequency to consider in period selection.')
+        minPGroup.add_argument('-p', nargs=1, default=DEFAULT_MINPERIOD, type=float, metavar='PeriodRangeMin',
+                               dest='minperiod', help='The minimum period to consider in period selection.')
+        parser.add_argument('-H', nargs=1, default=None, type=str, metavar='DataHome', dest='datahome',
+                            help='The directory where the data is located. If not supplied, the current working '
+                                 '\ndirectory is used.')
+        parser.add_argument('-i', nargs=1, default=DEFAULT_PSTEP, choices=['std', 'exp', 'fixedp', 'fixedf', 'plav'],
+                            help='Specifies which period-stepping method to use (one of std, exp, fixedf, fixedp, '
+                                 '\nplav).', type=str, dest='pstepType', metavar='PeriodStepMethod')
+        parser.add_argument('-K', nargs=1, default=DEFAULT_POW_NUM, dest='powN', metavar='StatNumberOfSamples',
+                            help='The number of samples to use for computation of p-values for output peaks. If not '
+                                 '\nentered, the number of periods for which power is computed will be used.', type=int)
+        parser.add_argument('-L', nargs=1, default=False, dest='outLabeled', type=boolInt, metavar='OutFileLabeled',
+                            help='Turns on and off column labels for the output file. Can be either 1 (on) or 0 (off). '
+                                 '\nIf not entered, it will default to 0, (off).')
+        parser.add_argument('-M', nargs=1, default=DEFAULT_POW_MEAN, dest='powMean', type=float, metavar='StatMean',
+                            help='Mean to use for computation of p-values for output peaks.  If not entered, the '
+                                 '\nobserved mean will be used.')
+        parser.add_argument('-n', nargs=1, default=DEFAULT_NOUT, dest='nout', type=int, metavar='NumberOfOutliers',
+                            help='Number of outliers to use in power calculation in the Plavchan algo (only with -a '
+                                 '\nplav)')
+        parser.add_argument('-N', nargs=1, default=DEFAULT_NPHASED, dest='nphased', metavar='NumberOfPeaksToReturn',
+                            help='Limit on the number of top peaks to output in table.', type=int)
+        parser.add_argument('-o', nargs=1, default=DEFAULT_OVERSAMPLE, dest='oversample', metavar='OversampleFactor',
+                            help='Increase number of periods sampled by this factor (not for use with -i plav or -d)',
+                            type=int)
+        parser.add_argument('-q', nargs=1, default=DEFAULT_QMIN, metavar='FractionOfPeriodInTransitMin', dest='qmin',
+                            help='Minimum fraction of period in transit to consider with BLS algo (-a bls only).',
+                            type=float)
+        parser.add_argument('-Q', nargs=1, default=DEFAULT_QMAX, metavar='FractionOfPeriodInTransitMax', dest='qmax',
+                            help='Maximum fraction of period in transit to consider with BLS algo (-a bls only).',
+                            type=float)
+        parser.add_argument('-R', nargs=1, default=None, type=str, metavar='OutputDirectory', dest='outDir',
+                            help='The directory in which to put output files (periodogram, table of top periods). '
+                                 '\nThe default is "."')
+        parser.add_argument('-s', default=DEFAULT_SMOOTH, type=float, metavar='PhaseSmoothingBoxSize', dest='smooth',
+                            help='Size of box over which to average magnitudes for smoothed curve.', nargs=1)
+        parser.add_argument('-S', nargs=1, default=DEFAULT_SIG_THRESH, type=float, metavar='PeakSignificanceThreshold',
+                            help='Maximum p-value to accept for output peaks in the power spectrum.', dest='sigThresh')
+        parser.add_argument('-u', dest='substep', help='Period increment factor for -i plav.', default=DEFAULT_SUBSTEP,
+                            type=float, metavar='PeriodStepFactor', nargs=1)
+        parser.add_argument('-V', dest='powSd', default=DEFAULT_POW_SD, type=float, metavar='StatStandardDeviation',
+                            help='Standard deviation to use for computation of p-values for output peaks. If not '
+                                 '\nentered, the observed standard deviation will be used', nargs=1)
+        parser.add_argument('-w', nargs=1, type=float, default=DEFAULT_CONSTRAINT, metavar='ConstraintRangeMin',
+                            dest='constraintMin', help='Smallest acceptable value of elements in ConstraintColumn.')
+        parser.add_argument('-W', nargs=1, type=float, default=DEFAULT_CONSTRAINT, metavar='ConstraintRangeMax',
+                            dest='constraintMax', help='Largest acceptable value of elements in ConstraintColumn.')
+        parser.add_argument('-x', nargs=1, type=str, dest='xcol', default=None, metavar='TimeColumn',
+                            help='Name of column in input file from which to read time info')
+        parser.add_argument('-X', nargs=1, type=str, dest='constraintCol', default=None, metavar='ConstraintColumn',
+                            help='Name of column in input file from which to read constraint info')
+        parser.add_argument('-y', nargs=1, type=str, dest='ycol', default=None, metavar='DataColumn',
+                            help='Name of column in input file from which to read measurement values.')
+        parser.add_argument('-Y', nargs=1, type=str, dest='yerrCol', default=None, metavar='DataErrorColumn',
+                            help='Name of column in input file from which to read measurement errors.')
+        parser.add_argument('InputFile', nargs=1, type=argparse.FileType('r'),
+                            help="Text file: first row contains either labels or data, separated by"
+                                 "\nthe DataDelimiter. If it contains data, do not supply -x, -X, -y,"
+                                 "\nor -Y. Otherwise, supply all that you want used. If a labeled"
+                                 "\ncolumn exists, but its label is not associated with a data type"
+                                 "\nin the arguments, it will be ignored. Subsequent rows contain data,"
+                                 "\nwith different data types separated by the DataDelimiter."
+                                 "\nIf column labels are not supplied, the following data types will"
+                                 "\nbe assumed:"
+                                 "\n          2 columns: TIME,DATA"
+                                 "\n          3 columns: TIME,DATA,ERROR"
+                                 "\n          4 columns: TIME,DATA,ERROR,CONSTRAINT"
+                                 "\n          5+ columns: TIME,DATA,ERROR,CONSTRAINT,UNUSED,UNUSED...")
+        parser.add_argument('OutputFile', nargs='?', type=argparse.FileType('w'),
+                            help="Text file. All content will be overwritten. Columns will"
+                                 "\nbe labeled according to OutFileLabeled, with a column format of"
+                                 "\nPERIOD,POWER. If no file is specified, one will be constructed in the"
+                                 "\noutput directory with the name '<path-free name of input file>.out")
+        args = parser.parse_args(argv)
+        self.algo = args.algo;
+        if args.nbins is None:
+            args.nbins = DEFAULT_NBINS
+        else:
+            nbSet = True
+        if not 2000 >= args.nbins >= 5:
+            raise ValueError("Inappropriate value for option -b:" + args.nbins + "\nargument must be in [5,2000]!")
+        self.nbins = args.nbins;
+
+        # Check that args haven't been set inconsistently
+        if nbSet and self.algo != "bls":
+            print("Error. Option -b cannot be used without -a bls.")
+            print(PGRAM_USAGE_TEXT)
+            exit()
+        if qminSet and self.algo != "bls":
+            print("Error. Option -q cannot be used without -a bls.")
+            print(PGRAM_USAGE_TEXT)
+            exit()
+        if qmaxSet and self.algo != "bls":
+            print("Error. Option -Q cannot be used without -a bls.")
+            print(PGRAM_USAGE_TEXT)
+            exit()
+        if dfSet and "fixedf" != self.pstepType != "fixedp":
+            print("Error. Option -d cannot be used with this PeriodStepMethod.")
+            print(PGRAM_USAGE_TEXT)
+            exit()
+        if noutSet and self.algo != "plav":
+            print("Error. Option -n cannot be used without -a plav.")
+            print(PGRAM_USAGE_TEXT)
+            exit()
+        if stepSet and self.pstepType != "plav":
+            print("Error. Option -u cannot be used without -i plav.")
+            print(PGRAM_USAGE_TEXT)
+            exit()
+        if self.pstepType == "plav" and self.oversample != DEFAULT_OVERSAMPLE:
+            print("Error. Option -o cannot be used with -i plav.")
+            print(PGRAM_USAGE_TEXT)
+            exit()
+        if dfSet and self.oversample != DEFAULT_OVERSAMPLE:
+            print("Error. Option -d cannot be used with -o.")
+            print(PGRAM_USAGE_TEXT)
+            exit()
+        if self.powMean != DEFAULT_POW_MEAN and \
+                self.algo == 'ls':
+            print("Error. Option -M cannot be used with -a ls.")
+            print(PGRAM_USAGE_TEXT)
+            exit()
+        if self.powSd != DEFAULT_POW_SD and \
+                self.algo == 'ls':
+            print("Error. Option -V cannot be used with -a ls.")
+            print(PGRAM_USAGE_TEXT)
+            exit()
+        if (self.constraintCol is None or self.constraintCol == "none") and \
+                (self.constraintMin != DEFAULT_CONSTRAINT or
+                 self.constraintMax != DEFAULT_CONSTRAINT):
+            print("Error. Cannot set constraint extremes without column.")
+            print(PGRAM_USAGE_TEXT)
+            exit()
+        if (self.constraintCol is not None or self.yerrCol is not None or
+            self.ycol is not None or self.xcol is not None) and \
+                (self.ycol is None or self.xcol is None):
+            print("Error. TimeColumn and DataColumn must be set if any columns are set!")
+            print(PGRAM_HELP_TEXT)
+            exit()
+
 
     # Function to get the pathless input filename
     def getInBase(self):

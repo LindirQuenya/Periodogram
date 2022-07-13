@@ -2,22 +2,21 @@
 # This file contains the help texts, printed when the program is run
 # with invalid arguments.
 
-PGRAM_USAGE_TEXT = " Usage: periodogram \n\t[-a <PeriodogramType (algorithm): one of ls, bls, plav>]" \
+PGRAM_USAGE_TEXT = " Usage: python3 -m periodogram \n\t[-a <PeriodogramType (algorithm): one of ls, bls, plav>]" \
                    "\n\t[-b <NumberOfBins (-a bls only)>]" \
                    "\n\t[-c <NumWorkers>]" \
                    "\n\t[-d <FixedStepSize (-i fixedf or -i fixedp only)>]" \
-                   "\n\t[-D <output file name for debugging (may say 'stdout' or 'stderr')>]" \
                    "\n\t[-e <DataDelimiter>]" \
                    "\n\t[-f <FrequencyRangeMin> | -P <PeriodRangeMax>]" \
                    "\n\t[-F <FrequencyRangeMax> | -p <PeriodRangeMin>]" \
-                   "\n\t[-h <DataHome directory: location of the input file>]" \
-                   "\n\t[-i <PeriodStepMethod: std, exp, fixedf, fixedp, plav>]" \
+                   "\n\t[-H <DataHome directory: location of the input file>]" \
+                   "\n\t[-i <PeriodStepMethod: one of std, exp, fixedf, fixedp, plav]" \
                    "\n\t[-K <StatNumberOfSamples>]" \
                    "\n\t[-L <OutFileLabeled>]" \
                    "\n\t[-M <StatMean> (not with -a ls)]" \
                    "\n\t[-n <NumberOfOutliers (-a plav only)>]" \
                    "\n\t[-N <NumberOfPeaksToReturn>]" \
-                   "\n\t[-o <OversampleFactor (not with -i plav)>]" \
+                   "\n\t[-o <OversampleFactor (not with -i plav or -d)>]" \
                    "\n\t[-q <FractionOfPeriodInTransitMin (-a bls only)>]" \
                    "\n\t[-Q <FractionOfPeriodInTransitMax (-a bls only)>]" \
                    "\n\t[-R <OutputDirectory>]" \
@@ -33,6 +32,7 @@ PGRAM_USAGE_TEXT = " Usage: periodogram \n\t[-a <PeriodogramType (algorithm): on
                    "\n\t[-Y <DataErrorColumn>]" \
                    "\n\t<InputFile>" \
                    "\n\t[<OutputFile>]"
+#                  "\n\t[-D <output file name for debugging (may say 'stdout' or 'stderr')>]" \
 #                  "\n\t[-c <Number of processors to split job across>]"\
 #                  "\n\t[-g <Remote server configuration file>]"\
 #                  "\n\t[-H <FitsHeaderDataUnit to use (for input files in FITS format)>]"\
@@ -74,12 +74,12 @@ PGRAM_HELP_TEXT = "\n\n Description:  " \
                   "\n    Maximum period to consider (may be optionally specified as minimum freq)" \
                   "\n -F <FrequencyRangeMax> | -p <PeriodRangeMin>" \
                   "\n    Minimum period to consider (may be specified as maximum freq)" \
-                  "\n -h <DataHome>" \
+                  "\n -H <DataHome>" \
                   "\n    The directory where the data is located. If not supplied," \
                   "\n    the location from which this is being run will be used." \
                   "\n -i <PeriodStepMethod>" \
                   "\n    Specifies which type of period stepping to use " \
-                  "\n    (one of std, exp, fixedf, plav)" \
+                  "\n    (one of std, exp, fixedf, fixedp, plav)" \
                   "\n -K <StatNumberOfSamples>" \
                   "\n    The number of samples to use for computation of p-values for output peaks." \
                   "\n    If not entered, the number of periods for which power is computed will " \
@@ -103,7 +103,7 @@ PGRAM_HELP_TEXT = "\n\n Description:  " \
                   "\n    Maximum fraction of period in transit to consider with BLS algo" \
                   "\n -R <OutputDirectory>" \
                   "\n    The directory in which to put output files (periodogram, " \
-                  "\n    table of top periods).  The default is '.'" \
+                  "\n    table of top periods). The default is '.'" \
                   "\n -s <PhaseSmoothingBoxSize>" \
                   "\n    Size of box over which to average magnitudes for smoothed curve" \
                   "\n -S <PeakSignificanceThreshold>" \
@@ -131,8 +131,8 @@ PGRAM_HELP_TEXT = "\n\n Description:  " \
                   "\n <input file> " \
                   "\n    Text file: first row contains either labels or data, separated by" \
                   "\n    the DataDelimiter. If it contains data, do not supply -x, -X, -y," \
-                  "\n    or -Y. Otherwise, supply all that you want used. labeled column" \
-                  "\n    exists, but its label is not associated with If a a data type" \
+                  "\n    or -Y. Otherwise, supply all that you want used. If a labeled" \
+                  "\n    column exists, but its label is not associated with a data type" \
                   "\n    in the arguments, it will be ignored. Subsequent rows contain data," \
                   "\n    with different data types separated by the DataDelimiter." \
                   "\n    If column labels are not supplied, the following data types will" \
@@ -151,7 +151,7 @@ PGRAM_HELP_TEXT = "\n\n Description:  " \
                   "\n Results: " \
                   "\n " \
                   "\n If successful, periodogram creates an output table file containing " \
-                  "\n period and power, prints \"[struct stat=\"OK\", msg=\"<msg>\"]\" to stdout, " \
+                  "\n period and power, prints the internal argument state to stdout, " \
                   "\n and exits with 0.  The output message contains the command line arguments" \
                   "\n needed to replicate the exact results, including derived quantities if any." \
                   "\n " \
@@ -162,3 +162,18 @@ PGRAM_HELP_TEXT = "\n\n Description:  " \
                   "\n " \
                   "\n $ periodogram test/test.txt -p .5 -P 1000 out" \
                   "\n "
+
+EPILOG_TEXT = "Results: " \
+              "\n " \
+              "\n If successful, periodogram creates an output table file containing " \
+              "\n period and power, prints the internal argument state to stdout, " \
+              "\n and exits with 0.  The output message contains the command line arguments" \
+              "\n needed to replicate the exact results, including derived quantities, if any." \
+              "\n " \
+              "\n Examples: " \
+              "\n " \
+              "\n The following example runs periodogram on a table file with the period " \
+              "\n range from .5 days to 1000 days and saves the output to outfile: " \
+              "\n " \
+              "\n $ python3 -m periodogram -p 0.5 -P 1000 test/test.csv test/outfile" \
+              "\n "
